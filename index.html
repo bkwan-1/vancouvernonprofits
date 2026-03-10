@@ -780,17 +780,15 @@
   }
 
   // ---- COUNTER ANIMATION ----
-  let countersRan = false;
   function runCounters() {
-    if (countersRan) return;
-    countersRan = true;
+    // Always re-run with latest cache.length — no lock
     document.querySelectorAll('.counter').forEach(el => {
       const target = el.dataset.target === 'nonprofits' ? cache.length : parseInt(el.dataset.target);
+      if (target === 0) { el.textContent = '0'; return; }
       const duration = 1800;
       const start = performance.now();
       function step(now) {
         const progress = Math.min((now - start) / duration, 1);
-        // easeOutExpo
         const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
         el.textContent = Math.floor(eased * target).toLocaleString();
         if (progress < 1) requestAnimationFrame(step);
@@ -800,9 +798,13 @@
     });
   }
 
-  // Trigger counters when stats section enters view
+  // Trigger counters when stats section enters view (for 50+ and 10,000+)
+  // The nonprofit counter is re-triggered explicitly after data loads
+  let statsInView = false;
   const statsObserver = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) { runCounters(); statsObserver.disconnect(); } });
+    entries.forEach(e => {
+      if (e.isIntersecting) { statsInView = true; runCounters(); }
+    });
   }, { threshold: 0.3 });
 
   // ---- NAVIGATION ----
@@ -817,9 +819,9 @@
       if (el) el.classList.toggle('active-link', p === page);
     });
 
-    // Reset counter if going home so it re-animates
+    // Re-observe stats section when returning to home
     if (page === 'home') {
-      countersRan = false;
+      statsInView = false;
       statsObserver.observe(document.querySelector('.stats-section'));
     }
 
@@ -846,6 +848,8 @@
           }
         </div>`;
     observeReveals();
+    // Re-run counters now that we have the real nonprofit count
+    runCounters();
   }
 
   function doHeroSearch() {

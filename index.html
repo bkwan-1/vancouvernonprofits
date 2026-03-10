@@ -780,11 +780,14 @@
   }
 
   // ---- COUNTER ANIMATION ----
-  // Static counters (50+, 10,000+) animate immediately when stats scroll into view.
-  // The nonprofit counter waits for fetchData() to complete, then animates right away.
+  // Simple, reliable approach:
+  // 1. fetchData() always runs first (in initHome before observer starts)
+  // 2. Observer starts AFTER data is loaded — so cache.length is always correct
+  // 3. All 3 counters animate together the moment stats section enters view
 
   function animateCounter(el, target) {
-    if (target === 0) { el.textContent = '0'; return; }
+    el.textContent = '0';
+    if (target === 0) return;
     const duration = 1600;
     const start = performance.now();
     function step(now) {
@@ -797,35 +800,28 @@
     requestAnimationFrame(step);
   }
 
-  // Scroll observer: fires when stats section enters view.
-  // Animates ONLY the static counters (50, 10000) immediately.
-  // The nonprofit counter is NEVER animated here — only initHome() handles it after fetch.
-  let statsAnimated = false;
-  let dataLoaded = false;  // true once fetchData() has finished
-  const statsObserver = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting && !statsAnimated) {
-      statsAnimated = true;
-      // Always animate static counters immediately
-      document.querySelectorAll('.counter[data-target="50"], .counter[data-target="10000"]').forEach(el => {
-        animateCounter(el, parseInt(el.dataset.target, 10));
-      });
-      // Only animate nonprofit counter if fetch already completed
-      if (dataLoaded) {
-        const el = document.querySelector('.counter[data-target="nonprofits"]');
-        if (el) animateCounter(el, cache.length);
-      }
-    }
-  }, { threshold: 0.2 });
+  function startAllCounters() {
+    document.querySelectorAll('.counter').forEach(el => {
+      const target = el.dataset.target === 'nonprofits'
+        ? cache.length
+        : parseInt(el.dataset.target, 10);
+      animateCounter(el, target);
+    });
+  }
 
-  // Called from initHome() after fetchData() completes
-  function animateNonprofitCounter() {
-    dataLoaded = true;
-    // Only animate if stats section is already visible on screen
-    if (statsAnimated) {
-      const el = document.querySelector('.counter[data-target="nonprofits"]');
-      if (el) animateCounter(el, cache.length);
-    }
-    // If stats not visible yet, the observer will animate it when user scrolls down
+  // Observer is created fresh each time initHome() calls startCounterObserver()
+  // so it always fires exactly once per home visit with up-to-date data
+  let statsObserver = null;
+  function startCounterObserver() {
+    if (statsObserver) statsObserver.disconnect();
+    document.querySelectorAll('.counter').forEach(el => el.textContent = '0');
+    statsObserver = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        statsObserver.disconnect();
+        startAllCounters();
+      }
+    }, { threshold: 0.2 });
+    statsObserver.observe(document.querySelector('.stats-section'));
   }
 
   // ---- NAVIGATION ----
@@ -840,15 +836,7 @@
       if (el) el.classList.toggle('active-link', p === page);
     });
 
-    // Reset counter state so it re-animates on each home visit
-    if (page === 'home') {
-      statsAnimated = false;
-      dataLoaded = false;
-      statsObserver.disconnect();
-      statsObserver.observe(document.querySelector('.stats-section'));
-      // Reset counter displays to 0
-      document.querySelectorAll('.counter').forEach(el => el.textContent = '0');
-    }
+
 
     setTimeout(observeReveals, 50);
 
@@ -871,10 +859,8 @@
           }
         </div>`;
     observeReveals();
-    // Animate nonprofit counter now that we have the real count
-    // (if stats section already scrolled into view, this fires immediately;
-    //  if not yet visible, the scroll observer will pick it up)
-    animateNonprofitCounter();
+    // Data is loaded — start observer now so all counters animate with correct values
+    startCounterObserver();
   }
 
   function doHeroSearch() {
@@ -1143,10 +1129,8 @@
   }
 
   // ---- BOOT ----
-  // showPage→initHome handles statsObserver.observe and fetchData
   observeReveals();
-  statsObserver.observe(document.querySelector('.stats-section'));
-  initHome();
+  initHome(); // fetches data, then starts counter observer
 </script>
 </body>
 </html>

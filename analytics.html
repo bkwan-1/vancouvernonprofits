@@ -1,449 +1,413 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Analytics — Vancouver Nonprofit Hub</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VNP Hub · Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --navy:       #1a2744;
-      --navy-mid:   #243358;
-      --navy-light: #2e4070;
-      --cream:      #f0ebe3;
-      --cream-dark: #e5ddd3;
-      --white:      #ffffff;
-      --border:     #e2ddd6;
-      --text:       #2c2c2c;
-      --text-light: #6b6b6b;
-      --green:      #22c55e;
-      --amber:      #f59e0b;
-      --red:        #ef4444;
-      --accent:     #4f7cff;
-    }
+  :root {
+    --navy: #1a2744;
+    --navy2: #223060;
+    --accent: #e8a87c;
+    --bg: #f5f4f0;
+    --card: #ffffff;
+    --border: #e2ddd7;
+    --text: #1a1a2e;
+    --muted: #6b6b80;
+    --sidebar-w: 220px;
+  }
 
-    html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--navy);
-      color: var(--text);
-      min-height: 100vh;
-    }
+  /* ── Password Gate ── */
+  #pw-gate {
+    position: fixed; inset: 0;
+    background: var(--navy);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  .pw-box {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    width: 100%; max-width: 380px;
+    text-align: center;
+  }
+  .pw-logo {
+    width: 52px; height: 52px;
+    background: rgba(232,168,124,0.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.2rem;
+  }
+  .pw-logo svg { width: 24px; height: 24px; stroke: var(--accent); fill: none; stroke-width: 2; }
+  .pw-title { font-family: 'Fraunces', serif; font-size: 1.5rem; color: #fff; margin-bottom: 0.3rem; }
+  .pw-sub { font-size: 0.82rem; color: rgba(255,255,255,0.45); margin-bottom: 1.8rem; }
 
-    /* ── SIDEBAR ── */
-    .layout { display: flex; min-height: 100vh; }
+  .pw-label {
+    font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.4);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    text-align: left; display: block; margin-bottom: 0.35rem;
+  }
+  .pw-field { margin-bottom: 1rem; }
+  .pw-input {
+    width: 100%; padding: 0.75rem 1rem;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px; color: #fff;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .pw-input::placeholder { color: rgba(255,255,255,0.3); }
+  .pw-input:focus { border-color: var(--accent); }
+  .pw-input.shake { animation: shake 0.4s; }
 
-    .sidebar {
-      width: 240px;
-      flex-shrink: 0;
-      background: #111c36;
-      display: flex;
-      flex-direction: column;
-      padding: 0;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow-y: auto;
-    }
+  .pw-btn {
+    width: 100%; padding: 0.85rem;
+    background: var(--accent); color: var(--navy);
+    border: none; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+    margin-top: 0.5rem;
+  }
+  .pw-btn:hover { opacity: 0.9; }
+  .pw-error { color: #f87171; font-size: 0.82rem; margin-top: 0.75rem; min-height: 1.2em; }
+  .pw-hint {
+    margin-top: 1.2rem; padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 0.72rem; color: rgba(255,255,255,0.3); line-height: 1.7;
+    text-align: left;
+  }
+  .pw-hint code {
+    background: rgba(255,255,255,0.1); padding: 0.1rem 0.3rem; border-radius: 3px;
+    font-size: 0.7rem;
+  }
 
-    .sidebar-brand {
-      padding: 1.6rem 1.4rem 1.4rem;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-    }
-    .sidebar-brand-row { display: flex; align-items: center; gap: 0.7rem; }
-    .sidebar-logo {
-      width: 34px; height: 34px;
-      background: var(--navy-light);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .sidebar-logo svg { width: 20px; height: 20px; stroke: white; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .sidebar-name { font-weight: 700; font-size: 0.88rem; color: white; line-height: 1.3; }
-    .sidebar-sub  { font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-top: 0.1rem; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 60%{transform:translateX(6px)}
+  }
 
-    .sidebar-section { padding: 1.4rem 1rem 0.5rem; }
-    .sidebar-section-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-bottom: 0.5rem; padding: 0 0.4rem; }
+  /* ── Dashboard layout ── */
+  #dashboard { display: none; min-height: 100vh; }
 
-    .sidebar-link {
-      display: flex; align-items: center; gap: 0.7rem;
-      padding: 0.6rem 0.75rem;
-      border-radius: 8px;
-      color: rgba(255,255,255,0.55);
-      font-size: 0.875rem; font-weight: 500;
-      cursor: pointer;
-      border: none; background: none; width: 100%; text-align: left;
-      transition: background 0.15s, color 0.15s;
-      text-decoration: none;
-      font-family: 'DM Sans', sans-serif;
-      margin-bottom: 0.1rem;
-    }
-    .sidebar-link svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-    .sidebar-link:hover { background: rgba(255,255,255,0.07); color: white; }
-    .sidebar-link.active { background: rgba(79,124,255,0.18); color: var(--accent); }
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-w);
+    background: var(--navy);
+    padding: 1.5rem 0;
+    display: flex; flex-direction: column;
+    z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 0 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .sidebar-logo-title {
+    font-family: 'Fraunces', serif; font-size: 1rem; color: #fff; line-height: 1.2;
+  }
+  .sidebar-logo-sub { font-size: 0.72rem; color: rgba(255,255,255,0.35); margin-top: 0.2rem; }
 
-    .sidebar-footer {
-      margin-top: auto;
-      padding: 1.2rem 1rem;
-      border-top: 1px solid rgba(255,255,255,0.07);
-    }
-    .last-updated { font-size: 0.75rem; color: rgba(255,255,255,0.3); display: flex; align-items: center; gap: 0.4rem; }
-    .last-updated svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+  .sidebar-nav { padding: 1rem 0; flex: 1; }
+  .sidebar-section {
+    font-size: 0.65rem; font-weight: 600; color: rgba(255,255,255,0.3);
+    text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 0.5rem 1.25rem 0.4rem;
+  }
+  .sidebar-link {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.6rem 1.25rem;
+    color: rgba(255,255,255,0.55);
+    font-size: 0.85rem; font-weight: 500;
+    cursor: pointer; border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .sidebar-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
+  .sidebar-link.active { color: var(--accent); border-left-color: var(--accent); background: rgba(232,168,124,0.08); }
+  .sidebar-link svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
 
-    /* ── MAIN CONTENT ── */
-    .main {
-      flex: 1;
-      background: var(--cream);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+  .sidebar-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 0.72rem; color: rgba(255,255,255,0.25);
+    line-height: 1.6;
+  }
+  .sidebar-footer a {
+    color: rgba(232,168,124,0.6); text-decoration: none; cursor: pointer;
+  }
+  .sidebar-footer a:hover { color: var(--accent); }
 
-    .topbar {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 0 2.2rem;
-      height: 60px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 100;
-    }
-    .topbar-title { font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 800; color: var(--navy); }
-    .topbar-right { display: flex; align-items: center; gap: 1rem; }
+  /* ── Main content ── */
+  .main {
+    margin-left: var(--sidebar-w);
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
 
-    .refresh-btn {
-      display: flex; align-items: center; gap: 0.45rem;
-      background: var(--navy); color: white; border: none;
-      padding: 0.5rem 1.1rem; border-radius: 8px;
-      font-size: 0.85rem; font-weight: 600;
-      cursor: pointer; font-family: 'DM Sans', sans-serif;
-      transition: background 0.2s, transform 0.15s;
-    }
-    .refresh-btn:hover { background: var(--navy-light); transform: translateY(-1px); }
-    .refresh-btn svg { width: 14px; height: 14px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.4s; }
-    .refresh-btn.spinning svg { animation: spin 0.7s linear infinite; }
+  .topbar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0.9rem 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-family: 'Fraunces', serif; font-size: 1.1rem; color: var(--navy); }
+  .topbar-right { display: flex; align-items: center; gap: 1rem; }
+  .last-updated { font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 0.4rem; }
+  .refresh-btn {
+    padding: 0.45rem 1rem;
+    background: var(--navy); color: #fff;
+    border: none; border-radius: 6px;
+    font-size: 0.8rem; font-weight: 500; cursor: pointer;
+    display: flex; align-items: center; gap: 0.4rem;
+    transition: opacity 0.2s;
+  }
+  .refresh-btn:hover { opacity: 0.85; }
+  .refresh-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .refresh-btn.spinning svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
-    .status-dot.loading { background: var(--amber); box-shadow: 0 0 0 3px rgba(245,158,11,0.2); }
-    .status-dot.error   { background: var(--red);   box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
+  /* ── Error/info banners ── */
+  .banner {
+    margin: 1.5rem 2rem 0;
+    padding: 0.9rem 1.2rem;
+    border-radius: 10px;
+    border: 1px solid #fde68a;
+    background: #fffbeb;
+    display: none;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .banner svg { width: 18px; height: 18px; stroke: #92400e; fill: none; stroke-width: 2; flex-shrink: 0; margin-top: 1px; }
+  .banner p { font-size: 0.85rem; color: #92400e; line-height: 1.6; }
+  .banner.error { background: #fff1f1; border-color: #fca5a5; }
+  .banner.error svg { stroke: #dc2626; }
+  .banner.error p { color: #991b1b; }
+  .banner code { background: rgba(0,0,0,0.08); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8rem; }
 
-    /* ── CONTENT BODY ── */
-    .content { padding: 2rem 2.2rem 4rem; }
+  /* ── Sections ── */
+  .content { padding: 2rem; display: flex; flex-direction: column; gap: 2rem; }
 
-    /* ── SETUP BANNER ── */
-    .setup-banner {
-      background: #fff8e1;
-      border: 1.5px solid #fbbf24;
-      border-radius: 12px;
-      padding: 1.2rem 1.5rem;
-      margin-bottom: 2rem;
-      display: flex; align-items: flex-start; gap: 1rem;
-    }
-    .setup-banner svg { width: 20px; height: 20px; stroke: #b45309; fill: none; stroke-width: 2; flex-shrink: 0; margin-top: 0.1rem; }
-    .setup-banner p { font-size: 0.88rem; color: #92400e; line-height: 1.6; }
-    .setup-banner code { background: rgba(0,0,0,0.08); padding: 0.1rem 0.35rem; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 0.8rem; }
+  section { display: flex; flex-direction: column; gap: 1.25rem; }
+  .section-title {
+    font-family: 'Fraunces', serif; font-size: 1.1rem; color: var(--navy);
+    padding-bottom: 0.6rem; border-bottom: 1px solid var(--border);
+  }
 
-    /* ── KPI CARDS ── */
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; margin-bottom: 2rem; }
+  /* ── KPI cards ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+  }
+  .kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.4rem; }
+  .kpi-value { font-family: 'Fraunces', serif; font-size: 2rem; color: var(--navy); line-height: 1; }
+  .kpi-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; }
 
-    .kpi-card {
-      background: white;
-      border-radius: 14px;
-      padding: 1.4rem 1.5rem;
-      border: 1px solid var(--border);
-      position: relative; overflow: hidden;
-    }
-    .kpi-card::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      border-radius: 14px 14px 0 0;
-    }
-    .kpi-card.blue::before   { background: var(--accent); }
-    .kpi-card.green::before  { background: var(--green); }
-    .kpi-card.amber::before  { background: var(--amber); }
-    .kpi-card.navy::before   { background: var(--navy); }
+  /* ── Panel ── */
+  .panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  }
+  .panel-header {
+    padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title { font-weight: 600; font-size: 0.9rem; color: var(--navy); }
+  .panel-body { padding: 1.5rem; }
 
-    .kpi-label { font-size: 0.78rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem; }
-    .kpi-value { font-family: 'Fraunces', serif; font-size: 2.4rem; font-weight: 800; color: var(--navy); line-height: 1; margin-bottom: 0.3rem; }
-    .kpi-sub   { font-size: 0.78rem; color: var(--text-light); }
-    .kpi-icon  { position: absolute; top: 1.2rem; right: 1.2rem; width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
-    .kpi-icon.blue  { background: rgba(79,124,255,0.1); }
-    .kpi-icon.green { background: rgba(34,197,94,0.1); }
-    .kpi-icon.amber { background: rgba(245,158,11,0.1); }
-    .kpi-icon.navy  { background: rgba(26,39,68,0.08); }
-    .kpi-icon svg   { width: 18px; height: 18px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .kpi-icon.blue  svg { stroke: var(--accent); }
-    .kpi-icon.green svg { stroke: var(--green); }
-    .kpi-icon.amber svg { stroke: var(--amber); }
-    .kpi-icon.navy  svg { stroke: var(--navy); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
-    /* ── TWO-COL ROW ── */
-    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.2rem; }
-    .row-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.2rem; margin-bottom: 1.2rem; }
+  /* ── Bar lists ── */
+  .bar-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .bar-row { display: flex; align-items: center; gap: 0.75rem; }
+  .bar-label { font-size: 0.82rem; color: var(--text); min-width: 120px; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; height: 8px; background: #f0ebe3; border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; background: var(--navy); transition: width 0.6s ease; }
+  .bar-count { font-size: 0.8rem; font-weight: 600; color: var(--muted); min-width: 28px; text-align: right; }
 
-    /* ── PANELS ── */
-    .panel {
-      background: white;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      overflow: hidden;
-    }
-    .panel-header {
-      padding: 1.2rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .panel-title { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; color: var(--navy); }
-    .panel-body  { padding: 1.4rem 1.5rem; }
+  /* ── Sparkline ── */
+  .sparkline-wrap { overflow-x: auto; }
+  .sparkline-chart {
+    display: flex; align-items: flex-end; gap: 4px;
+    height: 80px; padding-bottom: 20px; position: relative;
+    min-width: 400px;
+  }
+  .spark-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+  .spark-bar {
+    width: 100%; border-radius: 3px 3px 0 0;
+    background: var(--navy); transition: height 0.5s ease;
+    min-height: 2px;
+  }
+  .spark-lbl { font-size: 0.55rem; color: var(--muted); white-space: nowrap; transform: rotate(-45deg); margin-top: 2px; }
+  .trend-chip {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+  }
+  .trend-up { background: #dcfce7; color: #166534; }
+  .trend-down { background: #fee2e2; color: #991b1b; }
+  .trend-flat { background: #f1f5f9; color: #475569; }
 
-    /* ── BAR CHART ── */
-    .bar-list { display: flex; flex-direction: column; gap: 0.9rem; }
-    .bar-row  { display: flex; flex-direction: column; gap: 0.3rem; }
-    .bar-meta { display: flex; justify-content: space-between; align-items: baseline; }
-    .bar-name  { font-size: 0.86rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 75%; }
-    .bar-count { font-family: 'DM Mono', monospace; font-size: 0.82rem; color: var(--text-light); flex-shrink: 0; }
-    .bar-track { height: 7px; background: var(--cream); border-radius: 99px; overflow: hidden; }
-    .bar-fill  { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.7s cubic-bezier(0.16,1,0.3,1); width: 0%; }
+  /* ── Activity feed ── */
+  .feed { display: flex; flex-direction: column; }
+  .feed-row {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.7rem 0; border-bottom: 1px solid var(--border);
+  }
+  .feed-row:last-child { border-bottom: none; }
+  .feed-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .feed-name { font-size: 0.85rem; font-weight: 500; flex: 1; }
+  .feed-time { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
 
-    /* ── CATEGORY DONUTS ── */
-    .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-    .cat-row  { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.7rem; border-radius: 8px; background: var(--cream); }
-    .cat-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .cat-name-sm { font-size: 0.82rem; font-weight: 600; color: var(--text); flex: 1; }
-    .cat-count-sm{ font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text-light); }
+  /* ── Org table ── */
+  .search-bar {
+    padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.85rem; font-family: 'DM Sans', sans-serif; width: 100%; max-width: 300px;
+    outline: none;
+  }
+  .search-bar:focus { border-color: var(--navy); }
 
-    /* ── CLICK LOG TABLE ── */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    thead th {
-      text-align: left; padding: 0.7rem 1rem;
-      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
-      color: var(--text-light); background: var(--cream);
-      border-bottom: 1px solid var(--border);
-    }
-    tbody td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); }
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover td { background: #fafaf8; }
-    .td-mono { font-family: 'DM Mono', monospace; font-size: 0.8rem; color: var(--text-light); }
-    .rank-badge {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 22px; height: 22px; border-radius: 6px;
-      font-size: 0.72rem; font-weight: 700; font-family: 'DM Mono', monospace;
-    }
-    .rank-1 { background: #fef3c7; color: #92400e; }
-    .rank-2 { background: #f1f5f9; color: #475569; }
-    .rank-3 { background: #fff7ed; color: #9a3412; }
-    .rank-n { background: var(--cream); color: var(--text-light); }
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  th {
+    text-align: left; padding: 0.65rem 1rem; font-size: 0.72rem; font-weight: 600;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border); background: #faf9f7; cursor: pointer;
+  }
+  th:hover { color: var(--navy); }
+  td { padding: 0.7rem 1rem; border-bottom: 1px solid #f0ebe3; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #faf9f7; }
 
-    /* ── EMPTY / LOADING ── */
-    .empty { text-align: center; padding: 3rem 1rem; color: var(--text-light); font-size: 0.9rem; }
-    .empty svg { width: 40px; height: 40px; stroke: var(--cream-dark); fill: none; stroke-width: 1.5; margin-bottom: 0.8rem; display: block; margin-left: auto; margin-right: auto; }
+  .tag {
+    display: inline-block; padding: 0.15rem 0.55rem; border-radius: 20px;
+    font-size: 0.7rem; font-weight: 500; color: #fff;
+    margin: 1px;
+  }
 
-    .skeleton { background: linear-gradient(90deg, var(--cream) 25%, var(--cream-dark) 50%, var(--cream) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    @keyframes spin    { to { transform: rotate(360deg); } }
+  /* ── Category grid ── */
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 0.75rem; }
+  .cat-chip {
+    border-radius: 8px; padding: 0.75rem;
+    display: flex; flex-direction: column; gap: 0.25rem;
+  }
+  .cat-chip-name { font-size: 0.78rem; font-weight: 600; color: #fff; }
+  .cat-chip-count { font-size: 1.1rem; font-weight: 700; color: #fff; font-family: 'Fraunces', serif; }
 
-    /* ── SECTION HEADER ── */
-    .section-eyebrow { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.2rem; }
+  .empty { font-size: 0.85rem; color: var(--muted); padding: 1rem 0; text-align: center; }
 
-    /* ── MOBILE ── */
-    @media (max-width: 900px) {
-      .sidebar { display: none; }
-      .kpi-grid { grid-template-columns: 1fr 1fr; }
-      .row-2, .row-3 { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 500px) {
-      .kpi-grid { grid-template-columns: 1fr; }
-      .content  { padding: 1.2rem 1rem 3rem; }
-      .topbar   { padding: 0 1rem; }
-    }
-
-    /* ── SPARKLINE ── */
-    .sparkline-wrap { display: flex; align-items: flex-end; gap: 3px; height: 40px; margin-top: 0.8rem; }
-    .spark-bar { flex: 1; border-radius: 3px 3px 0 0; background: rgba(79,124,255,0.25); transition: height 0.5s cubic-bezier(0.16,1,0.3,1), background 0.2s; min-height: 3px; }
-    .spark-bar:hover { background: var(--accent); }
-
-    /* ── PASSWORD GATE ── */
-    #pw-gate {
-      position: fixed; inset: 0; z-index: 9999;
-      background: #111c36;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .pw-box {
-      background: #1a2744;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 18px;
-      padding: 2.8rem 2.4rem;
-      width: 100%; max-width: 380px;
-      text-align: center;
-      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
-    }
-    .pw-logo {
-      width: 52px; height: 52px;
-      background: rgba(79,124,255,0.15);
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 1.4rem;
-    }
-    .pw-logo svg { width: 26px; height: 26px; stroke: #4f7cff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .pw-title { font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 800; color: white; margin-bottom: 0.4rem; }
-    .pw-sub   { font-size: 0.85rem; color: rgba(255,255,255,0.45); margin-bottom: 1.8rem; }
-    .pw-input {
-      width: 100%; background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 10px; padding: 0.85rem 1rem;
-      font-size: 0.95rem; font-family: 'DM Sans', sans-serif;
-      color: white; outline: none; text-align: center;
-      letter-spacing: 0.1em;
-      transition: border-color 0.2s;
-      margin-bottom: 0.9rem;
-    }
-    .pw-input::placeholder { color: rgba(255,255,255,0.25); letter-spacing: 0; }
-    .pw-input:focus { border-color: #4f7cff; }
-    .pw-input.shake { animation: shake 0.4s ease; border-color: #ef4444; }
-    .pw-btn {
-      width: 100%; background: #4f7cff; color: white; border: none;
-      padding: 0.85rem; border-radius: 10px;
-      font-size: 0.95rem; font-weight: 600;
-      cursor: pointer; font-family: 'DM Sans', sans-serif;
-      transition: background 0.2s, transform 0.15s;
-    }
-    .pw-btn:hover { background: #3d6bef; transform: translateY(-1px); }
-    .pw-error { font-size: 0.82rem; color: #ef4444; margin-top: 0.7rem; min-height: 1.2em; }
-    @keyframes shake {
-      0%,100% { transform: translateX(0); }
-      20%      { transform: translateX(-8px); }
-      40%      { transform: translateX(8px); }
-      60%      { transform: translateX(-5px); }
-      80%      { transform: translateX(5px); }
-    }
-
-    /* ── ACTIVITY FEED ── */
-    .activity-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; border-bottom: 1px solid var(--border); }
-    .activity-row:last-child { border-bottom: none; }
-    .activity-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-    .activity-body { flex: 1; min-width: 0; }
-    .activity-name { font-size: 0.85rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .activity-time { font-size: 0.75rem; color: var(--text-light); margin-top: 0.1rem; font-family: 'DM Mono', monospace; }
-    .activity-cat  { font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 20px; flex-shrink: 0; white-space: nowrap; }
-
-    /* ── TEST CONNECTION MODAL ── */
-    .test-btn { background: transparent; border: 1.5px solid var(--border); color: var(--text-light); padding: 0.45rem 0.9rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; display:flex;align-items:center;gap:0.4rem; }
-    .test-btn:hover { border-color: var(--navy); color: var(--navy); }
-    .test-btn svg { width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round; }
-    #test-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:5000;display:none;align-items:center;justify-content:center; }
-    #test-modal-overlay.show { display:flex; }
-    #test-modal { background:white;border-radius:16px;width:90%;max-width:560px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.25); }
-    .tm-header { display:flex;align-items:center;justify-content:space-between;padding:1.2rem 1.5rem;border-bottom:1px solid var(--border); }
-    .tm-title { font-family:'Fraunces',serif;font-size:1.1rem;font-weight:800;color:var(--navy); }
-    .tm-close { background:none;border:none;cursor:pointer;color:var(--text-light);font-size:1.3rem;padding:0.2rem; }
-    .tm-body { padding:1.2rem 1.5rem;overflow-y:auto;flex:1; }
-    .tm-row { margin-bottom:1.1rem; }
-    .tm-label { font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-light);margin-bottom:0.35rem; }
-    .tm-status { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;font-weight:600;padding:0.3rem 0.7rem;border-radius:20px; }
-    .tm-status.ok    { background:rgba(34,197,94,0.1);color:#15803d; }
-    .tm-status.fail  { background:rgba(239,68,68,0.1);color:#dc2626; }
-    .tm-status.wait  { background:rgba(245,158,11,0.1);color:#b45309; }
-    .tm-pre { background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:0.8rem;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text);overflow-x:auto;white-space:pre-wrap;word-break:break-all;max-height:140px;overflow-y:auto; }
-    .tm-run-btn { background:var(--navy);color:white;border:none;padding:0.6rem 1.3rem;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:0.5rem; }
-  </style>
+  /* ── Setup URL modal ── */
+  #url-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 9000;
+    align-items: center; justify-content: center;
+  }
+  #url-modal-overlay.open { display: flex; }
+  .url-modal {
+    background: var(--card); border-radius: 16px; padding: 2rem;
+    width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .url-modal h3 { font-family: 'Fraunces', serif; font-size: 1.2rem; margin-bottom: 0.4rem; }
+  .url-modal p { font-size: 0.82rem; color: var(--muted); margin-bottom: 1.2rem; line-height: 1.6; }
+  .url-modal input {
+    width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem; outline: none;
+    margin-bottom: 1rem;
+  }
+  .url-modal input:focus { border-color: var(--navy); }
+  .url-modal-btns { display: flex; gap: 0.75rem; justify-content: flex-end; }
+  .btn-secondary {
+    padding: 0.65rem 1.2rem; border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; font-size: 0.85rem; cursor: pointer;
+  }
+  .btn-primary {
+    padding: 0.65rem 1.2rem; background: var(--navy); color: #fff; border: none; border-radius: 8px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  }
+</style>
 </head>
 <body>
 
-<!-- PASSWORD GATE -->
+<!-- ── Password Gate ── -->
 <div id="pw-gate">
   <div class="pw-box">
     <div class="pw-logo">
-      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
     <div class="pw-title">Dashboard Access</div>
     <div class="pw-sub">Vancouver Nonprofit Hub · Admin Only</div>
-    <div style="text-align:left;margin-bottom:0.5rem;">
-      <div style="font-size:0.72rem;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.35rem;">Apps Script URL</div>
-      <input id="url-input" class="pw-input" type="url" placeholder="https://script.google.com/macros/s/…/exec"
-        style="margin-bottom:0;letter-spacing:0;font-size:0.8rem;text-align:left;"
-        onkeydown="if(event.key==='Enter')document.getElementById('pw-input').focus()" />
-    </div>
-    <div style="text-align:left;margin-bottom:0.9rem;">
-      <div style="font-size:0.72rem;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.35rem;">Password</div>
+
+    <div class="pw-field">
+      <label class="pw-label" for="pw-input">Password</label>
       <input id="pw-input" class="pw-input" type="password" placeholder="Enter password"
-        style="margin-bottom:0;"
-        onkeydown="if(event.key==='Enter')checkPassword()" autofocus />
+        onkeydown="if(event.key==='Enter')unlock()" autofocus/>
     </div>
-    <button class="pw-btn" onclick="checkPassword()">Unlock Dashboard</button>
+
+    <button class="pw-btn" onclick="unlock()">Unlock Dashboard</button>
     <div class="pw-error" id="pw-error"></div>
-    <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);font-size:0.73rem;color:rgba(255,255,255,0.3);line-height:1.6;">
-      The Apps Script URL is the <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.3rem;border-radius:3px">/exec</code> URL from your Google Apps Script deployment.<br>It's the same URL in <code style="background:rgba(255,255,255,0.08);padding:0.1rem 0.3rem;border-radius:3px">index.html</code>.
+
+    <div class="pw-hint">
+      Password: <code>vnphub2024</code><br>
+      The dashboard reads your Apps Script URL from <code>localStorage</code> — the same one you set in <code>index.html</code>.
+      If data doesn't load, open the main site and set your Apps Script URL there first, then come back here.
     </div>
   </div>
 </div>
 
+<!-- ── Dashboard ── -->
+<div id="dashboard">
 
-<div class="layout" id="dashboard" style="display:none">
-
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sidebar-brand">
-      <div class="sidebar-brand-row">
-        <div class="sidebar-logo">
-          <svg viewBox="0 0 24 24"><path d="M3 18l9-9 4 4 5-7"/><polyline points="17 4 22 4 22 9"/></svg>
-        </div>
-        <div>
-          <div class="sidebar-name">VNP Hub</div>
-          <div class="sidebar-sub">Analytics Dashboard</div>
-        </div>
-      </div>
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-title">VNP Hub</div>
+      <div class="sidebar-logo-sub">Analytics Dashboard</div>
     </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">Overview</div>
-      <button id="nav-overview" class="sidebar-link active" onclick="scrollToSection('#section-overview')">
+    <div class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <div class="sidebar-link active" id="nav-overview" onclick="scrollTo('#section-overview','nav-overview')">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         Overview
-      </button>
-      <button id="nav-clicks" class="sidebar-link" onclick="scrollToSection('#section-clicks')">
+      </div>
+      <div class="sidebar-section">Activity</div>
+      <div class="sidebar-link" id="nav-clicks" onclick="scrollTo('#section-clicks','nav-clicks')">
         <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Website Clicks
-      </button>
-      <button id="nav-orgs" class="sidebar-link" onclick="scrollToSection('#section-orgs')">
+        Click Trends
+      </div>
+      <div class="sidebar-link" id="nav-activity" onclick="scrollTo('#section-activity','nav-activity')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Recent Activity
+      </div>
+      <div class="sidebar-section">Directory</div>
+      <div class="sidebar-link" id="nav-orgs" onclick="scrollTo('#section-orgs','nav-orgs')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Organizations
-      </button>
-      <button id="nav-cats" class="sidebar-link" onclick="scrollToSection('#section-categories')">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </div>
+      <div class="sidebar-link" id="nav-cats" onclick="scrollTo('#section-cats','nav-cats')">
+        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         Categories
-      </button>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">Links</div>
-      <a class="sidebar-link" href="index.html">
-        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Back to Website
-      </a>
-    </div>
-
-    <div class="sidebar-footer">
-      <div class="last-updated" id="last-updated-text">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Not yet loaded
       </div>
     </div>
-  </aside>
+    <div class="sidebar-footer">
+      <a onclick="openUrlModal()">⚙ Change Apps Script URL</a><br>
+      <span id="footer-url-status"></span>
+    </div>
+  </nav>
 
-  <!-- MAIN -->
-  <main class="main">
-
+  <!-- Main -->
+  <div class="main">
     <div class="topbar">
-      <div class="topbar-title">Dashboard</div>
+      <div class="topbar-title">Analytics Dashboard</div>
       <div class="topbar-right">
-        <div class="status-dot loading" id="status-dot"></div>
-        <button class="test-btn" onclick="openTestModal()">
-          <svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
-          Test Connection
-        </button>
+        <div class="last-updated" id="last-updated">—</div>
         <button class="refresh-btn" id="refresh-btn" onclick="loadAll()">
           <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Refresh
@@ -451,143 +415,165 @@
       </div>
     </div>
 
+    <!-- Error/warning banners -->
+    <div class="banner" id="warn-banner" style="display:none">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p id="warn-banner-msg"></p>
+    </div>
+    <div class="banner error" id="err-banner" style="display:none">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <p id="err-banner-msg"></p>
+    </div>
+
     <div class="content">
 
-      <!-- SETUP BANNER -->
-      <div class="setup-banner" id="setup-banner" style="display:none;">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <p>
-          To connect live data, open this file and set <code>SCRIPT_URL</code> at the top of the &lt;script&gt; to your Google Apps Script URL.
-          It's the same URL used in <code>index.html</code>.
-        </p>
-      </div>
+      <!-- Overview KPIs -->
+      <section id="section-overview">
+        <div class="section-title">Overview</div>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total Nonprofits</div>
+            <div class="kpi-value" id="kpi-total">—</div>
+            <div class="kpi-sub">in directory</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Clicks</div>
+            <div class="kpi-value" id="kpi-clicks">—</div>
+            <div class="kpi-sub" id="kpi-clicks-today">— today</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Most Clicked</div>
+            <div class="kpi-value" style="font-size:1rem;padding-top:0.4rem" id="kpi-top">—</div>
+            <div class="kpi-sub" id="kpi-top-count"></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Active Categories</div>
+            <div class="kpi-value" id="kpi-cats">—</div>
+            <div class="kpi-sub">of 12 categories</div>
+          </div>
+        </div>
 
-      <!-- KPI CARDS -->
-      <div id="section-overview"></div>
-      <div class="kpi-grid" id="kpi-grid">
-        <div class="kpi-card blue"><div class="kpi-icon blue"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="kpi-label">Total Nonprofits</div><div class="kpi-value skeleton" id="kpi-total" style="width:60px;height:2.4rem;">&nbsp;</div><div class="kpi-sub" id="kpi-total-sub">&nbsp;</div></div>
-        <div class="kpi-card green"><div class="kpi-icon green"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="kpi-label">Total Website Clicks</div><div class="kpi-value skeleton" id="kpi-clicks" style="width:60px;height:2.4rem;">&nbsp;</div><div class="kpi-sub" id="kpi-clicks-sub">&nbsp;</div></div>
-        <div class="kpi-card amber"><div class="kpi-icon amber"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div><div class="kpi-label">Most Clicked Org</div><div class="kpi-value" id="kpi-top" style="font-size:1.1rem;line-height:1.3;padding-top:0.4rem;"><span class="skeleton" style="display:block;width:90%;height:1.1rem;">&nbsp;</span></div><div class="kpi-sub" id="kpi-top-sub">&nbsp;</div></div>
-        <div class="kpi-card navy"><div class="kpi-icon navy"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div><div class="kpi-label">Categories Active</div><div class="kpi-value skeleton" id="kpi-cats" style="width:60px;height:2.4rem;">&nbsp;</div><div class="kpi-sub" id="kpi-cats-sub">&nbsp;</div></div>
-      </div>
+        <!-- Top orgs + category bars -->
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-header"><div class="panel-title">Top Organizations by Clicks</div></div>
+            <div class="panel-body">
+              <div class="bar-list" id="top-orgs-bars"><div class="empty">Loading…</div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><div class="panel-title">Clicks by Category</div></div>
+            <div class="panel-body">
+              <div class="bar-list" id="cat-click-bars"><div class="empty">Loading…</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <!-- CLICKS OVER TIME + TOP ORGS -->
-      <div id="section-clicks"></div>
-      <div class="row-3">
-
+      <!-- Click trends -->
+      <section id="section-clicks">
+        <div class="section-title">Click Trends</div>
         <div class="panel">
           <div class="panel-header">
-            <div>
-              <div class="section-eyebrow">Engagement</div>
-              <div class="panel-title">Website Clicks — Top Organizations</div>
-            </div>
-            <div style="font-size:0.78rem;color:var(--text-light)" id="clicks-range"></div>
+            <div class="panel-title">Daily Clicks — Last 14 Days</div>
+            <div id="trend-chip"></div>
           </div>
           <div class="panel-body">
-            <div class="bar-list" id="click-bars">
-              <div class="empty">
-                <svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-                Loading click data…
-              </div>
+            <div class="sparkline-wrap">
+              <div class="sparkline-chart" id="sparkline"><div class="empty">Loading…</div></div>
             </div>
           </div>
         </div>
+      </section>
 
+      <!-- Recent activity -->
+      <section id="section-activity">
+        <div class="section-title">Recent Activity</div>
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">Last 20 Clicks</div></div>
+          <div class="panel-body">
+            <div class="feed" id="activity-feed"><div class="empty">Loading…</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Organizations table -->
+      <section id="section-orgs">
+        <div class="section-title">Organizations</div>
         <div class="panel">
           <div class="panel-header">
-            <div class="panel-title">Click Activity</div>
+            <div class="panel-title">All Nonprofits</div>
+            <input class="search-bar" type="text" placeholder="Search…" oninput="renderOrgTable(this.value)"/>
           </div>
-          <div class="panel-body">
-            <div style="font-size:0.78rem;color:var(--text-light);margin-bottom:0.4rem;">Clicks per day (last 14 days)</div>
-            <div class="sparkline-wrap" id="sparkline"></div>
-            <div style="display:flex;justify-content:space-between;margin-top:0.4rem;">
-              <span style="font-size:0.7rem;color:var(--text-light)" id="spark-start"></span>
-              <span style="font-size:0.7rem;color:var(--text-light)" id="spark-end"></span>
-            </div>
-            <div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-light)" id="spark-trend"></div>
-          </div>
-        </div>
-
-        <div class="panel" style="margin-top:1.2rem;">
-          <div class="panel-header">
-            <div class="panel-title">Recent Activity</div>
-            <div style="font-size:0.75rem;color:var(--text-light)">Last 8 clicks</div>
-          </div>
-          <div class="panel-body" style="padding:0 1.5rem;">
-            <div id="recent-activity"></div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ORG TABLE -->
-      <div id="section-orgs"></div>
-      <div class="panel" style="margin-bottom:1.2rem;">
-        <div class="panel-header">
-          <div>
-            <div class="section-eyebrow">Directory</div>
-            <div class="panel-title">All Organizations</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.6rem;">
-            <input id="org-search" placeholder="Search…" oninput="filterOrgTable()" style="border:1px solid var(--border);border-radius:7px;padding:0.4rem 0.75rem;font-size:0.83rem;font-family:'DM Sans',sans-serif;outline:none;width:160px;" />
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Organization</th>
-                <th>Categories</th>
-                <th>Location</th>
-                <th>Website Clicks</th>
-                <th>Listed</th>
-              </tr>
-            </thead>
-            <tbody id="org-tbody">
-              <tr><td colspan="6" class="empty">Loading…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- CATEGORIES -->
-      <div id="section-categories"></div>
-      <div class="row-2">
-        <div class="panel">
-          <div class="panel-header">
-            <div class="panel-title">Organizations by Category</div>
-          </div>
-          <div class="panel-body">
-            <div class="bar-list" id="cat-bars">
-              <div class="empty">Loading…</div>
+          <div class="panel-body" style="padding:0">
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th onclick="sortTable('name')">Name ↕</th>
+                    <th onclick="sortTable('categories')">Categories</th>
+                    <th onclick="sortTable('location')">Location</th>
+                    <th onclick="sortTable('clicks')" style="text-align:right">Clicks ↕</th>
+                    <th onclick="sortTable('created')" style="text-align:right">Listed ↕</th>
+                  </tr>
+                </thead>
+                <tbody id="org-tbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+              </table>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="panel">
-          <div class="panel-header">
-            <div class="panel-title">Category Breakdown</div>
+      <!-- Categories -->
+      <section id="section-cats">
+        <div class="section-title">Categories</div>
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-header"><div class="panel-title">Orgs per Category</div></div>
+            <div class="panel-body">
+              <div class="bar-list" id="cat-org-bars"><div class="empty">Loading…</div></div>
+            </div>
           </div>
-          <div class="panel-body">
-            <div class="cat-grid" id="cat-grid">
-              <div class="empty" style="grid-column:1/-1;">Loading…</div>
+          <div class="panel">
+            <div class="panel-header"><div class="panel-title">Category Distribution</div></div>
+            <div class="panel-body">
+              <div class="cat-grid" id="cat-grid"><div class="empty" style="grid-column:1/-1">Loading…</div></div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
     </div><!-- /content -->
-  </main>
+  </div><!-- /main -->
+</div><!-- /dashboard -->
+
+<!-- URL Modal -->
+<div id="url-modal-overlay">
+  <div class="url-modal">
+    <h3>Apps Script URL</h3>
+    <p>Paste your Google Apps Script <code>/exec</code> URL here. This is the same URL you enter on the main site. It will be saved to <code>localStorage</code> on this browser.</p>
+    <input id="url-modal-input" type="url" placeholder="https://script.google.com/macros/s/…/exec"
+      onkeydown="if(event.key==='Enter')saveUrl()"/>
+    <div class="url-modal-btns">
+      <button class="btn-secondary" onclick="closeUrlModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveUrl()">Save & Reload</button>
+    </div>
+  </div>
 </div>
 
 <script>
-  // ─────────────────────────────────────────────
-  // URL is stored in sessionStorage — no file
-  // editing needed. Enter it at the login screen.
-  // ─────────────────────────────────────────────
-  let SCRIPT_URL = sessionStorage.getItem('https://script.google.com/macros/s/AKfycbw7_oAF-slbqn4T_IQJFdLf6ytMaxp73aKo0F1dIsMormckGdxnrtssaTp3ZFOuxTZgsQ/exec') || '';
-  let isDemo = !SCRIPT_URL;
+  // ════════════════════════════════════════════════════════
+  //  CONFIG
+  //  SCRIPT_URL is read from localStorage key 'vnp_script_url'
+  //  — the same key used by index.html.
+  //  Set it there (via the Settings modal on the main site)
+  //  and the dashboard will automatically pick it up.
+  // ════════════════════════════════════════════════════════
+  const DASHBOARD_PASSWORD = 'vnhub2026';
+
+  function getScriptUrl() {
+    return (localStorage.getItem('vnp_script_url') || '').trim();
+  }
 
   // ── Category colours ──
   const CAT_COLORS = {
@@ -606,544 +592,412 @@
   };
 
   // ── State ──
-  // orgsData  : array of org objects from Nonprofits sheet
-  // rawClicks : array of { orgId, orgName, timestamp } — every individual click row
   let orgsData  = [];
   let rawClicks = [];
+  let sortCol   = 'clicks';
+  let sortDir   = -1; // -1 = desc
 
   // ── Helpers ──
   function esc(s) {
     return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function setText(id, val) {
-    const el = document.getElementById(id);
-    if (el) { el.textContent = val; el.classList.remove('skeleton'); el.style.cssText = ''; }
-  }
-
-  // Return a YYYY-MM-DD string in local time for a Date object
   function toLocalDate(d) {
-    return d.getFullYear() + '-' +
-      String(d.getMonth()+1).padStart(2,'0') + '-' +
-      String(d.getDate()).padStart(2,'0');
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   }
-
-  // Aggregate rawClicks → { orgId: count }
+  function relTime(ts) {
+    if (!ts) return '';
+    const diff = Date.now() - new Date(ts).getTime();
+    const m = Math.floor(diff/60000);
+    if (m < 1)  return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m/60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h/24)}d ago`;
+  }
   function buildClickMap() {
     const m = {};
-    rawClicks.forEach(c => { m[c.orgId] = (m[c.orgId] || 0) + 1; });
+    rawClicks.forEach(c => { m[c.orgId] = (m[c.orgId]||0)+1; });
     return m;
   }
-
-  // Build daily buckets for the last N days from rawClicks
   function buildDailyBuckets(days) {
-    const buckets = {};
-    const labels  = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
+    const buckets={}, labels=[];
+    for (let i=days-1; i>=0; i--) {
+      const d = new Date(); d.setDate(d.getDate()-i);
       const key = toLocalDate(d);
-      buckets[key] = 0;
-      labels.push({ key, label: d.toLocaleDateString('en-CA', { month:'short', day:'numeric' }) });
+      buckets[key]=0;
+      labels.push({key, label: d.toLocaleDateString('en-CA',{month:'short',day:'numeric'})});
     }
     rawClicks.forEach(c => {
       if (!c.timestamp) return;
       const key = toLocalDate(new Date(c.timestamp));
       if (key in buckets) buckets[key]++;
     });
-    return labels.map(l => ({ ...l, count: buckets[l.key] }));
+    return labels.map(l=>({...l, count: buckets[l.key]}));
   }
 
-  // ── Sidebar scroll ──
-  function scrollToSection(id) {
+  // ── Sidebar nav ──
+  function scrollTo(id, navId) {
     const el = document.querySelector(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-    const map = {
-      '#section-overview': 'nav-overview',
-      '#section-clicks':   'nav-clicks',
-      '#section-orgs':     'nav-orgs',
-      '#section-categories':'nav-cats'
-    };
-    const navId = map[id];
-    if (navId) document.getElementById(navId).classList.add('active');
+    if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+    document.querySelectorAll('.sidebar-link').forEach(l=>l.classList.remove('active'));
+    if (navId) document.getElementById(navId)?.classList.add('active');
   }
 
-  // ── Robust fetch that follows Apps Script redirects ──
+  // ── Banners ──
+  function showWarn(msg) {
+    const b = document.getElementById('warn-banner');
+    b.style.display = 'flex';
+    document.getElementById('warn-banner-msg').innerHTML = msg;
+  }
+  function showErr(msg) {
+    const b = document.getElementById('err-banner');
+    b.style.display = 'flex';
+    document.getElementById('err-banner-msg').innerHTML = msg;
+  }
+  function clearBanners() {
+    document.getElementById('warn-banner').style.display='none';
+    document.getElementById('err-banner').style.display='none';
+  }
+
+  // ── Fetch ──
   async function apiFetch(url) {
-    // Apps Script redirects once; fetch follows by default in browsers.
-    // We try with credentials omitted so CORS works cross-origin.
-    const res = await fetch(url, { redirect: 'follow', credentials: 'omit' });
-    if (!res.ok) throw new Error(`HTTP ${res.status} from Apps Script`);
+    const res = await fetch(url, {redirect:'follow', credentials:'omit'});
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
-    try {
-      return JSON.parse(text);
-    } catch(e) {
-      throw new Error('Apps Script returned non-JSON: ' + text.slice(0, 200));
-    }
-  }
-
-  function showError(msg) {
-    const banner = document.getElementById('setup-banner');
-    banner.style.display = 'flex';
-    banner.style.background = '#fff1f1';
-    banner.style.borderColor = '#ef4444';
-    banner.querySelector('svg').style.stroke = '#dc2626';
-    banner.querySelector('p').style.color = '#991b1b';
-    banner.querySelector('p').innerHTML =
-      `<strong>Connection error:</strong> ${esc(msg)}<br>
-       <span style="font-size:0.82rem;opacity:0.8">
-         Check that: (1) your SCRIPT_URL is correct in analytics.html, 
-         (2) the Apps Script is deployed as <strong>Execute as: Me</strong> / <strong>Anyone</strong>,
-         (3) you created a <strong>new version</strong> after pasting the updated Code.gs.
-       </span>`;
+    try { return JSON.parse(text); }
+    catch(e) { throw new Error('Non-JSON response: '+text.slice(0,200)); }
   }
 
   // ── Load all data ──
   async function loadAll() {
-    setStatus('loading');
+    clearBanners();
     const btn = document.getElementById('refresh-btn');
     btn.classList.add('spinning');
 
-    if (isDemo) {
-      document.getElementById('setup-banner').style.display = 'flex';
-      orgsData  = DEMO_ORGS;
-      rawClicks = DEMO_RAW_CLICKS;
-    } else {
-      document.getElementById('setup-banner').style.display = 'none';
-      try {
-        const [orgRes, clkRes] = await Promise.all([
-          apiFetch(`${SCRIPT_URL}?action=get`),
-          apiFetch(`${SCRIPT_URL}?action=getClicks`)
-        ]);
-        if (orgRes.status !== 'success') throw new Error('get: ' + orgRes.message);
-        if (clkRes.status !== 'success') throw new Error('getClicks: ' + clkRes.message);
-        orgsData  = orgRes.data  || [];
-        rawClicks = clkRes.data  || [];
-      } catch (e) {
-        showError(e.message);
-        setStatus('error');
-        btn.classList.remove('spinning');
-        return;
-      }
+    const url = getScriptUrl();
+    if (!url) {
+      showWarn(`No Apps Script URL set. <strong>Open <code>index.html</code> → Settings → paste your Apps Script URL</strong>, then refresh this page. <a style="color:#92400e;font-weight:600;cursor:pointer" onclick="openUrlModal()">Or set it here directly.</a>`);
+      btn.classList.remove('spinning');
+      renderAll(); // render with empty data
+      return;
+    }
+
+    try {
+      const [orgRes, clkRes] = await Promise.all([
+        apiFetch(`${url}?action=get`),
+        apiFetch(`${url}?action=getClicks`)
+      ]);
+      if (orgRes.status !== 'success') throw new Error('Orgs: '+orgRes.message);
+      if (clkRes.status !== 'success') throw new Error('Clicks: '+clkRes.message);
+      orgsData  = orgRes.data  || [];
+      rawClicks = clkRes.data  || [];
+    } catch(e) {
+      showErr(
+        `<strong>Connection failed:</strong> ${esc(e.message)}<br>
+         <span style="font-size:0.8rem">Check: (1) URL is correct, (2) Apps Script deployed as <em>Execute as: Me / Anyone</em>, (3) you created a <em>new version</em> after changing Code.gs.</span><br>
+         <a style="color:#991b1b;font-weight:600;cursor:pointer" onclick="openUrlModal()">Update URL</a>`
+      );
+      btn.classList.remove('spinning');
+      return;
     }
 
     renderAll();
-    setStatus('ok');
     btn.classList.remove('spinning');
-    document.getElementById('last-updated-text').innerHTML =
-      `<svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-       Updated ${new Date().toLocaleTimeString()}`;
+    document.getElementById('last-updated').textContent = 'Updated '+new Date().toLocaleTimeString();
+    document.getElementById('footer-url-status').textContent = '✓ Connected';
   }
 
+  // ── Render everything ──
   function renderAll() {
-    const clickMap = buildClickMap();
-    renderKPIs(clickMap);
-    renderClickBars(clickMap);
+    renderKPIs();
+    renderTopOrgBars();
+    renderCatClickBars();
     renderSparkline();
-    renderRecentActivity();
-    renderOrgTable(clickMap);
-    renderCategoryCharts();
+    renderActivityFeed();
+    renderOrgTable('');
+    renderCatOrgBars();
+    renderCatGrid();
   }
 
-  function setStatus(state) {
-    const dot = document.getElementById('status-dot');
-    dot.className = 'status-dot' + (state === 'ok' ? '' : state === 'error' ? ' error' : ' loading');
-  }
-
-  // ── KPI Cards ──
-  function renderKPIs(clickMap) {
-    const totalOrgs   = orgsData.length;
-    const totalClicks = rawClicks.length;
-
-    // Most clicked org
-    const sorted = Object.entries(clickMap).sort((a,b) => b[1]-a[1]);
-    const topId  = sorted[0]?.[0];
-    const topOrg = topId ? orgsData.find(o => o.id === topId) : null;
-    const topClicks = sorted[0]?.[1] || 0;
-
-    // Active categories
-    const cats = new Set();
-    orgsData.forEach(o => (o.categories||'').split(',').forEach(c => { if (c.trim()) cats.add(c.trim()); }));
-
-    // Clicks today
+  // ── KPIs ──
+  function renderKPIs() {
+    const clickMap = buildClickMap();
     const todayKey = toLocalDate(new Date());
-    const todayClicks = rawClicks.filter(c => c.timestamp && toLocalDate(new Date(c.timestamp)) === todayKey).length;
+    const todayCount = rawClicks.filter(c=>c.timestamp && toLocalDate(new Date(c.timestamp))===todayKey).length;
 
-    setText('kpi-total',     totalOrgs);
-    setText('kpi-total-sub', `${totalOrgs === 1 ? '1 organization' : totalOrgs + ' organizations'} listed`);
-    setText('kpi-clicks',    totalClicks);
-    setText('kpi-clicks-sub', `${todayClicks} click${todayClicks !== 1 ? 's' : ''} today`);
+    document.getElementById('kpi-total').textContent = orgsData.length;
+    document.getElementById('kpi-clicks').textContent = rawClicks.length;
+    document.getElementById('kpi-clicks-today').textContent = `${todayCount} today`;
 
-    const topEl = document.getElementById('kpi-top');
-    topEl.classList.remove('skeleton');
-    topEl.style.cssText = '';
-    topEl.innerHTML = topOrg
-      ? `<span style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:800;color:var(--navy);line-height:1.3;display:block">${esc(topOrg.name)}</span>`
-      : `<span style="color:var(--text-light);font-size:0.88rem">No clicks yet</span>`;
-    setText('kpi-top-sub', topOrg ? `${topClicks} click${topClicks !== 1 ? 's' : ''}` : '');
-
-    setText('kpi-cats',     cats.size);
-    setText('kpi-cats-sub', `across ${totalOrgs} organization${totalOrgs!==1?'s':''}`);
-  }
-
-  // ── Top Orgs Click Bar Chart ──
-  function renderClickBars(clickMap) {
-    const container = document.getElementById('click-bars');
-    // Build sorted list enriched with org name
-    const entries = Object.entries(clickMap)
-      .map(([id, count]) => {
-        const org = orgsData.find(o => o.id === id);
-        return { id, name: org ? org.name : (rawClicks.find(c=>c.orgId===id)?.orgName || id), count };
-      })
-      .sort((a,b) => b.count - a.count)
-      .slice(0, 10);
-
-    if (!entries.length) {
-      container.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>No website clicks recorded yet.<br><small style="font-size:0.82rem">Clicks appear here when visitors navigate to a nonprofit's website.</small></div>`;
-      document.getElementById('clicks-range').textContent = '';
-      return;
+    // Most clicked
+    const topId = Object.entries(clickMap).sort((a,b)=>b[1]-a[1])[0];
+    if (topId) {
+      const org = orgsData.find(o=>o.id===topId[0]);
+      document.getElementById('kpi-top').textContent = org ? org.name : topId[0];
+      document.getElementById('kpi-top-count').textContent = `${topId[1]} clicks`;
+    } else {
+      document.getElementById('kpi-top').textContent = '—';
     }
 
-    const max = entries[0].count;
-    document.getElementById('clicks-range').textContent = `Top ${entries.length}`;
-    container.innerHTML = entries.map(e => `
-      <div class="bar-row">
-        <div class="bar-meta">
-          <span class="bar-name">${esc(e.name)}</span>
-          <span class="bar-count">${e.count} click${e.count!==1?'s':''}</span>
-        </div>
-        <div class="bar-track"><div class="bar-fill" data-pct="${(e.count/max*100).toFixed(1)}"></div></div>
-      </div>`).join('');
-
-    requestAnimationFrame(() => {
-      document.querySelectorAll('#click-bars .bar-fill').forEach(el => {
-        el.style.width = el.dataset.pct + '%';
-      });
+    // Active cats
+    const activeCats = new Set();
+    orgsData.forEach(o=>{
+      (o.categories||'').split(',').forEach(c=>{const t=c.trim();if(t)activeCats.add(t);});
     });
+    document.getElementById('kpi-cats').textContent = activeCats.size;
   }
 
-  // ── Sparkline: clicks per day, last 14 days ──
-  function renderSparkline() {
-    const buckets = buildDailyBuckets(14);
-    const max     = Math.max(...buckets.map(b => b.count), 1);
-
-    document.getElementById('sparkline').innerHTML = buckets.map(b => {
-      const pct = Math.max((b.count / max) * 100, 4);
-      return `<div class="spark-bar" style="height:${pct}%" title="${b.label}: ${b.count} click${b.count!==1?'s':''}"></div>`;
-    }).join('');
-
-    document.getElementById('spark-start').textContent = buckets[0].label;
-    document.getElementById('spark-end').textContent   = buckets[buckets.length-1].label;
-
-    // Total for the window
-    const windowTotal = buckets.reduce((s,b) => s + b.count, 0);
-    const prevBuckets = buildDailyBuckets(28).slice(0, 14);
-    const prevTotal   = prevBuckets.reduce((s,b) => s + b.count, 0);
-    const trendEl = document.getElementById('spark-trend');
-    if (trendEl) {
-      if (prevTotal === 0) {
-        trendEl.textContent = `${windowTotal} clicks in last 14 days`;
-      } else {
-        const pct = Math.round(((windowTotal - prevTotal) / prevTotal) * 100);
-        const sign = pct >= 0 ? '+' : '';
-        trendEl.textContent = `${windowTotal} clicks · ${sign}${pct}% vs prior 14 days`;
-        trendEl.style.color = pct >= 0 ? 'var(--green)' : 'var(--red)';
-      }
-    }
-  }
-
-  // ── Recent Activity Feed ──
-  function renderRecentActivity() {
-    const el = document.getElementById('recent-activity');
-    if (!el) return;
-    const recent = [...rawClicks]
-      .filter(c => c.timestamp)
-      .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, 8);
-
-    if (!recent.length) {
-      el.innerHTML = `<div class="empty" style="padding:1.5rem">No activity yet.</div>`;
-      return;
-    }
-
-    el.innerHTML = recent.map(c => {
-      const org  = orgsData.find(o => o.id === c.orgId);
-      const name = org ? org.name : (c.orgName || c.orgId);
-      const cat  = org ? (org.categories||'').split(',')[0].trim() : '';
-      const color = CAT_COLORS[cat] || '#6b6b6b';
-      const ts   = c.timestamp ? new Date(c.timestamp) : null;
-      const timeStr = ts ? ts.toLocaleString('en-CA', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
-      return `<div class="activity-row">
-        <div class="activity-dot" style="background:${color}"></div>
-        <div class="activity-body">
-          <div class="activity-name">${esc(name)}</div>
-          <div class="activity-time">${timeStr}</div>
-        </div>
-        ${cat ? `<span class="activity-cat" style="background:${color}20;color:${color}">${esc(cat)}</span>` : ''}
+  // ── Top org bars ──
+  function renderTopOrgBars() {
+    const clickMap = buildClickMap();
+    const sorted = Object.entries(clickMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const max = sorted[0]?.[1] || 1;
+    const el = document.getElementById('top-orgs-bars');
+    if (!sorted.length) { el.innerHTML='<div class="empty">No click data yet</div>'; return; }
+    el.innerHTML = sorted.map(([id,cnt])=>{
+      const org = orgsData.find(o=>o.id===id);
+      const name = org ? org.name : id;
+      const pct = Math.round(cnt/max*100);
+      return `<div class="bar-row">
+        <div class="bar-label" title="${esc(name)}">${esc(name)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div class="bar-count">${cnt}</div>
       </div>`;
     }).join('');
   }
 
-  // ── Org Table ──
-  let orgTableData = [];
-  function renderOrgTable(clickMap) {
-    orgTableData = orgsData.map(o => ({
-      ...o,
-      clicks: clickMap[o.id] || 0
-    })).sort((a,b) => b.clicks - a.clicks);
-    drawOrgTable(orgTableData);
+  // ── Category click bars ──
+  function renderCatClickBars() {
+    const clickMap = buildClickMap();
+    const catMap = {};
+    orgsData.forEach(o=>{
+      const cnt = clickMap[o.id]||0;
+      (o.categories||'').split(',').forEach(c=>{
+        const t=c.trim(); if(!t) return;
+        catMap[t]=(catMap[t]||0)+cnt;
+      });
+    });
+    const sorted = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+    const max = sorted[0]?.[1] || 1;
+    const el = document.getElementById('cat-click-bars');
+    if (!sorted.length) { el.innerHTML='<div class="empty">No data</div>'; return; }
+    el.innerHTML = sorted.map(([cat,cnt])=>{
+      const pct = Math.round(cnt/max*100);
+      const col = CAT_COLORS[cat]||'#6b6b80';
+      return `<div class="bar-row">
+        <div class="bar-label">${esc(cat)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="bar-count">${cnt}</div>
+      </div>`;
+    }).join('');
   }
 
-  function filterOrgTable() {
-    const q = document.getElementById('org-search').value.toLowerCase();
-    drawOrgTable(orgTableData.filter(o =>
-      (o.name||'').toLowerCase().includes(q) ||
-      (o.categories||'').toLowerCase().includes(q) ||
-      (o.location||o.neighborhood||'').toLowerCase().includes(q)
-    ));
-  }
+  // ── Sparkline ──
+  function renderSparkline() {
+    const days = buildDailyBuckets(14);
+    const counts = days.map(d=>d.count);
+    const max = Math.max(...counts, 1);
+    const recent7 = counts.slice(7).reduce((a,b)=>a+b,0);
+    const prior7  = counts.slice(0,7).reduce((a,b)=>a+b,0);
 
-  function drawOrgTable(rows) {
-    const tbody = document.getElementById('org-tbody');
-    if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="6"><div class="empty">No organizations found.</div></td></tr>`;
-      return;
+    // Trend chip
+    let chipHtml = '';
+    if (prior7===0 && recent7===0) {
+      chipHtml = `<span class="trend-chip trend-flat">No data</span>`;
+    } else if (prior7===0) {
+      chipHtml = `<span class="trend-chip trend-up">↑ New activity</span>`;
+    } else {
+      const pct = Math.round((recent7-prior7)/prior7*100);
+      if (pct>0)       chipHtml=`<span class="trend-chip trend-up">↑ ${pct}% vs prior 7d</span>`;
+      else if (pct<0)  chipHtml=`<span class="trend-chip trend-down">↓ ${Math.abs(pct)}% vs prior 7d</span>`;
+      else             chipHtml=`<span class="trend-chip trend-flat">→ Flat</span>`;
     }
-    tbody.innerHTML = rows.map((o, i) => {
-      const rankClass = i < 3 ? `rank-${i+1}` : 'rank-n';
-      const cats = (o.categories||'').split(',').map(c=>c.trim()).filter(Boolean)
-        .map(c=>`<span style="background:${CAT_COLORS[c]||'#6b6b6b'}20;color:${CAT_COLORS[c]||'#6b6b6b'};font-size:0.72rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:20px;display:inline-block;margin:0.1rem 0.1rem 0 0;">${esc(c)}</span>`).join('');
-      const loc     = esc(o.location || o.neighborhood || '—');
-      const created = o.created ? new Date(o.created).toLocaleDateString('en-CA', { year:'numeric', month:'short', day:'numeric' }) : '—';
-      const hasWebsite = !!(o.website);
+    document.getElementById('trend-chip').innerHTML = chipHtml;
+
+    // Bars
+    document.getElementById('sparkline').innerHTML = days.map(d=>{
+      const h = Math.max(Math.round(d.count/max*60),2);
+      return `<div class="spark-col">
+        <div class="spark-bar" style="height:${h}px" title="${d.label}: ${d.count} clicks"></div>
+        <div class="spark-lbl">${d.label}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Activity feed ──
+  function renderActivityFeed() {
+    const recent = [...rawClicks]
+      .sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))
+      .slice(0,20);
+    const el = document.getElementById('activity-feed');
+    if (!recent.length) { el.innerHTML='<div class="empty">No click data yet</div>'; return; }
+    el.innerHTML = recent.map(c=>{
+      const org = orgsData.find(o=>o.id===c.orgId);
+      const cats = org ? (org.categories||'').split(',').map(s=>s.trim()).filter(Boolean) : [];
+      const col = cats.length ? (CAT_COLORS[cats[0]]||'#6b6b80') : '#6b6b80';
+      return `<div class="feed-row">
+        <div class="feed-dot" style="background:${col}"></div>
+        <div class="feed-name">${esc(c.orgName||c.orgId)}</div>
+        <div class="feed-time">${relTime(c.timestamp)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Org table ──
+  function renderOrgTable(q) {
+    const clickMap = buildClickMap();
+    let rows = orgsData.map(o=>({
+      ...o,
+      clicks: clickMap[o.id]||0,
+      _cats: (o.categories||'').split(',').map(s=>s.trim()).filter(Boolean)
+    }));
+
+    if (q) {
+      const lq = q.toLowerCase();
+      rows = rows.filter(r=>
+        (r.name||'').toLowerCase().includes(lq)||
+        (r.location||'').toLowerCase().includes(lq)||
+        (r.categories||'').toLowerCase().includes(lq)
+      );
+    }
+
+    rows.sort((a,b)=>{
+      let av=a[sortCol]||'', bv=b[sortCol]||'';
+      if (typeof av==='number') return (av-bv)*sortDir;
+      return av.toString().localeCompare(bv.toString())*sortDir;
+    });
+
+    const tbody = document.getElementById('org-tbody');
+    if (!rows.length) { tbody.innerHTML='<tr><td colspan="5" class="empty">No results</td></tr>'; return; }
+
+    tbody.innerHTML = rows.map(r=>{
+      const tags = r._cats.map(c=>{
+        const col=CAT_COLORS[c]||'#6b6b80';
+        return `<span class="tag" style="background:${col}">${esc(c)}</span>`;
+      }).join('');
+      const listed = r.created ? new Date(r.created).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}) : '—';
       return `<tr>
-        <td><span class="rank-badge ${rankClass}">${i+1}</span></td>
-        <td>
-          <strong style="font-size:0.88rem;color:var(--navy)">${esc(o.name||'—')}</strong>
-          ${o.tagline ? `<br><span style="font-size:0.78rem;color:var(--text-light)">${esc(o.tagline)}</span>` : ''}
-        </td>
-        <td>${cats || '<span style="color:var(--text-light);font-size:0.8rem">—</span>'}</td>
-        <td style="font-size:0.85rem;color:var(--text-light)">${loc}</td>
-        <td>
-          <span style="font-family:'DM Mono',monospace;font-size:0.9rem;font-weight:700;color:${o.clicks > 0 ? 'var(--accent)' : 'var(--text-light)'}">${o.clicks}</span>
-          ${!hasWebsite ? `<span style="font-size:0.7rem;color:var(--text-light);margin-left:0.3rem">(no website)</span>` : ''}
-        </td>
-        <td class="td-mono">${created}</td>
+        <td style="font-weight:500">${esc(r.name)}</td>
+        <td>${tags}</td>
+        <td>${esc(r.location||r.neighborhood||'')}</td>
+        <td style="text-align:right;font-weight:600;color:var(--navy)">${r.clicks}</td>
+        <td style="text-align:right;color:var(--muted)">${listed}</td>
       </tr>`;
     }).join('');
   }
 
-  // ── Category Charts ──
-  function renderCategoryCharts() {
-    const counts = {};
-    orgsData.forEach(o => {
-      (o.categories||'').split(',').forEach(c => {
-        c = c.trim(); if (!c) return;
-        counts[c] = (counts[c]||0) + 1;
+  let _tblSearch = '';
+  function sortTable(col) {
+    if (sortCol===col) sortDir*=-1; else { sortCol=col; sortDir=-1; }
+    renderOrgTable(_tblSearch);
+  }
+  // Hook search input to store query
+  document.querySelector('.search-bar').addEventListener('input', function(){
+    _tblSearch = this.value;
+    renderOrgTable(_tblSearch);
+  });
+
+  // ── Category org bars ──
+  function renderCatOrgBars() {
+    const catMap = {};
+    orgsData.forEach(o=>{
+      (o.categories||'').split(',').forEach(c=>{
+        const t=c.trim(); if(!t) return;
+        catMap[t]=(catMap[t]||0)+1;
       });
     });
-    const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
-    const max    = sorted[0]?.[1] || 1;
-
-    const barEl = document.getElementById('cat-bars');
-    if (!sorted.length) {
-      barEl.innerHTML = '<div class="empty">No category data yet.</div>';
-    } else {
-      barEl.innerHTML = sorted.map(([cat, count]) => `
-        <div class="bar-row">
-          <div class="bar-meta">
-            <span class="bar-name">${esc(cat)}</span>
-            <span class="bar-count">${count} org${count!==1?'s':''}</span>
-          </div>
-          <div class="bar-track">
-            <div class="bar-fill" data-pct="${(count/max*100).toFixed(1)}" style="background:${CAT_COLORS[cat]||'var(--navy)'}"></div>
-          </div>
-        </div>`).join('');
-      requestAnimationFrame(() => {
-        document.querySelectorAll('#cat-bars .bar-fill').forEach(el => { el.style.width = el.dataset.pct + '%'; });
-      });
-    }
-
-    const gridEl = document.getElementById('cat-grid');
-    if (!sorted.length) {
-      gridEl.innerHTML = '<div class="empty" style="grid-column:1/-1">No data yet.</div>';
-    } else {
-      gridEl.innerHTML = sorted.map(([cat, count]) => `
-        <div class="cat-row">
-          <div class="cat-dot" style="background:${CAT_COLORS[cat]||'#6b6b6b'}"></div>
-          <span class="cat-name-sm">${esc(cat)}</span>
-          <span class="cat-count-sm">${count}</span>
-        </div>`).join('');
-    }
+    const sorted = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+    const max = sorted[0]?.[1]||1;
+    const el = document.getElementById('cat-org-bars');
+    if (!sorted.length) { el.innerHTML='<div class="empty">No data</div>'; return; }
+    el.innerHTML = sorted.map(([cat,cnt])=>{
+      const pct = Math.round(cnt/max*100);
+      const col = CAT_COLORS[cat]||'#6b6b80';
+      return `<div class="bar-row">
+        <div class="bar-label">${esc(cat)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="bar-count">${cnt}</div>
+      </div>`;
+    }).join('');
   }
 
-  // ── Demo data (realistic, timestamped) ──
-  const DEMO_ORGS = [
-    { id:'d1', name:'Green Vancouver Initiative',  tagline:'Protecting our natural spaces',     categories:'Environment',                  location:'Kitsilano',    neighborhood:'Kitsilano',    website:'https://example.com', created: new Date(Date.now()-30*86400000).toISOString() },
-    { id:'d2', name:'YouthLink Vancouver',          tagline:'Empowering the next generation',    categories:'Youth,Education',              location:'East Vancouver',neighborhood:'',            website:'https://example.com', created: new Date(Date.now()-60*86400000).toISOString() },
-    { id:'d3', name:'BC Food Security Network',     tagline:'Fighting hunger across the region', categories:'Food Security,Community Services', location:'Downtown',  neighborhood:'',            website:'https://example.com', created: new Date(Date.now()-15*86400000).toISOString() },
-    { id:'d4', name:'Vancouver Arts Collective',    tagline:'Celebrating local creativity',      categories:'Arts & Culture',               location:'Mount Pleasant',neighborhood:'',            website:'',                    created: new Date(Date.now()-90*86400000).toISOString() },
-    { id:'d5', name:'Coastal Animal Rescue',        tagline:'Every animal deserves a home',      categories:'Animal Welfare',               location:'North Vancouver',neighborhood:'',           website:'https://example.com', created: new Date(Date.now()-45*86400000).toISOString() },
-    { id:'d6', name:'Seniors Connect Society',      tagline:'Reducing isolation for older adults',categories:'Seniors,Community Services',  location:'Burnaby',      neighborhood:'',            website:'https://example.com', created: new Date(Date.now()-20*86400000).toISOString() },
-  ];
-
-  // Generate realistic raw click data spread across the last 30 days
-  (function() {
-    const clicks = [];
-    const pool = [
-      { id:'d1', name:'Green Vancouver Initiative',  daily: [0,1,2,1,3,2,1,0,2,3,2,1,2,3,1,2,3,2,4,3,2,1,3,2,1,2,1,3,2,1] },
-      { id:'d2', name:'YouthLink Vancouver',          daily: [0,0,1,2,1,0,1,2,1,1,2,1,1,2,1,0,1,2,1,2,1,1,0,1,2,1,1,0,1,1] },
-      { id:'d3', name:'BC Food Security Network',     daily: [1,0,0,1,1,2,1,0,1,1,0,1,2,1,0,1,0,1,1,2,1,0,1,1,0,0,1,1,2,1] },
-      { id:'d5', name:'Coastal Animal Rescue',        daily: [0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0] },
-      { id:'d6', name:'Seniors Connect Society',      daily: [0,0,1,0,0,0,1,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,1,0,0,0,1,0] },
-    ];
-    pool.forEach(org => {
-      org.daily.forEach((count, dayAgo) => {
-        for (let k = 0; k < count; k++) {
-          const ts = new Date();
-          ts.setDate(ts.getDate() - (29 - dayAgo));
-          ts.setHours(Math.floor(Math.random()*12)+8, Math.floor(Math.random()*60));
-          clicks.push({ orgId: org.id, orgName: org.name, timestamp: ts.toISOString() });
-        }
+  // ── Category grid ──
+  function renderCatGrid() {
+    const catMap = {};
+    orgsData.forEach(o=>{
+      (o.categories||'').split(',').forEach(c=>{
+        const t=c.trim(); if(!t) return;
+        catMap[t]=(catMap[t]||0)+1;
       });
     });
-    window.DEMO_RAW_CLICKS = clicks;
-  })();
-
-  // ── Test Connection Modal ──
-  function openTestModal() {
-    document.getElementById('test-modal-overlay').classList.add('show');
-    document.getElementById('tm-url').textContent = isDemo ? '(not set — running demo mode)' : SCRIPT_URL;
+    const el = document.getElementById('cat-grid');
+    if (!Object.keys(catMap).length) { el.innerHTML='<div class="empty" style="grid-column:1/-1">No data</div>'; return; }
+    el.innerHTML = Object.entries(catMap)
+      .sort((a,b)=>b[1]-a[1])
+      .map(([cat,cnt])=>{
+        const col=CAT_COLORS[cat]||'#6b6b80';
+        return `<div class="cat-chip" style="background:${col}">
+          <div class="cat-chip-count">${cnt}</div>
+          <div class="cat-chip-name">${esc(cat)}</div>
+        </div>`;
+      }).join('');
   }
-  function closeTestModal() {
-    document.getElementById('test-modal-overlay').classList.remove('show');
-  }
 
-  async function runConnectionTest() {
-    if (isDemo) {
-      document.getElementById('tm-orgs-result').textContent = 'Set SCRIPT_URL first.';
+  // ── URL modal ──
+  function openUrlModal() {
+    const existing = getScriptUrl();
+    document.getElementById('url-modal-input').value = existing;
+    document.getElementById('url-modal-overlay').classList.add('open');
+  }
+  function closeUrlModal() {
+    document.getElementById('url-modal-overlay').classList.remove('open');
+  }
+  function saveUrl() {
+    const val = document.getElementById('url-modal-input').value.trim();
+    if (val && !val.startsWith('https://script.google.com')) {
+      alert('URL must start with https://script.google.com');
       return;
     }
-    const btn = document.getElementById('tm-run-btn');
-    btn.textContent = 'Testing…'; btn.disabled = true;
-
-    async function testEndpoint(action, statusId, resultId) {
-      const statusEl = document.getElementById(statusId);
-      const resultEl = document.getElementById(resultId);
-      statusEl.className = 'tm-status wait'; statusEl.textContent = 'Fetching…';
-      try {
-        const url = `${SCRIPT_URL}?action=${action}`;
-        const res = await fetch(url, { redirect:'follow', credentials:'omit' });
-        const text = await res.text();
-        let parsed;
-        try { parsed = JSON.parse(text); } catch(e) { throw new Error('Non-JSON response: ' + text.slice(0,300)); }
-        if (parsed.status === 'success') {
-          statusEl.className = 'tm-status ok';
-          statusEl.textContent = `✓ OK — ${Array.isArray(parsed.data) ? parsed.data.length + ' rows' : 'response received'}`;
-          resultEl.textContent = JSON.stringify(parsed).slice(0, 400) + (JSON.stringify(parsed).length > 400 ? '…' : '');
-        } else {
-          throw new Error(parsed.message || JSON.stringify(parsed));
-        }
-      } catch(e) {
-        statusEl.className = 'tm-status fail';
-        statusEl.textContent = '✗ Failed';
-        resultEl.textContent = e.message;
-      }
-    }
-
-    await Promise.all([
-      testEndpoint('get',       'tm-orgs-status',   'tm-orgs-result'),
-      testEndpoint('getClicks', 'tm-clicks-status', 'tm-clicks-result')
-    ]);
-    btn.textContent = 'Run Test Again'; btn.disabled = false;
+    if (val) localStorage.setItem('vnp_script_url', val);
+    closeUrlModal();
+    loadAll();
   }
+  document.getElementById('url-modal-overlay').addEventListener('click', e=>{
+    if (e.target===e.currentTarget) closeUrlModal();
+  });
 
   // ── Password ──
-  const DASHBOARD_PASSWORD = 'vnphub2024';
-
-  function checkPassword() {
-    const pwInput  = document.getElementById('pw-input');
-    const urlInput = document.getElementById('url-input');
-    const pw       = pwInput.value.trim();
-    const url      = urlInput ? urlInput.value.trim() : '';
-    const errEl    = document.getElementById('pw-error');
-
-    // Validate URL if provided
-    if (url && !url.startsWith('https://script.google.com')) {
-      errEl.textContent = 'URL should start with https://script.google.com';
-      urlInput.classList.add('shake');
-      setTimeout(() => urlInput.classList.remove('shake'), 500);
-      return;
-    }
-
+  function unlock() {
+    const pw = document.getElementById('pw-input').value.trim();
     if (pw === DASHBOARD_PASSWORD) {
-      // Save URL to sessionStorage so it persists across refreshes
-      if (url) {
-        sessionStorage.setItem('vnp_script_url', url);
-        SCRIPT_URL = url;
-        isDemo = false;
-      } else {
-        // No URL entered — run in demo mode
-        isDemo = true;
-      }
-      document.getElementById('pw-gate').style.display = 'none';
-      document.getElementById('dashboard').style.display = 'flex';
-      sessionStorage.setItem('vnp_auth', '1');
+      sessionStorage.setItem('vnp_auth','1');
+      document.getElementById('pw-gate').style.display='none';
+      document.getElementById('dashboard').style.display='flex';
       loadAll();
     } else {
-      pwInput.classList.remove('shake');
-      void pwInput.offsetWidth;
-      pwInput.classList.add('shake');
-      errEl.textContent = 'Incorrect password. Try again.';
-      pwInput.value = '';
-      setTimeout(() => pwInput.classList.remove('shake'), 500);
+      const inp = document.getElementById('pw-input');
+      inp.classList.remove('shake');
+      void inp.offsetWidth;
+      inp.classList.add('shake');
+      document.getElementById('pw-error').textContent='Incorrect password.';
+      inp.value='';
     }
   }
 
   // ── Boot ──
-  if (sessionStorage.getItem('vnp_auth') === '1') {
-    // Already authenticated this session — restore URL and go straight to dashboard
-    SCRIPT_URL = sessionStorage.getItem('vnp_script_url') || '';
-    isDemo = !SCRIPT_URL;
-    document.getElementById('pw-gate').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'flex';
+  if (sessionStorage.getItem('vnp_auth')==='1') {
+    document.getElementById('pw-gate').style.display='none';
+    document.getElementById('dashboard').style.display='flex';
     loadAll();
+  }
+
+  // Pre-fill footer URL status
+  const savedUrl = getScriptUrl();
+  if (savedUrl) {
+    document.getElementById('footer-url-status').textContent = '✓ URL set';
   } else {
-    // Pre-fill URL field if we have one saved
-    const saved = sessionStorage.getItem('vnp_script_url');
-    if (saved) {
-      const urlField = document.getElementById('url-input');
-      if (urlField) urlField.value = saved;
-    }
+    document.getElementById('footer-url-status').textContent = '⚠ No URL set';
   }
 </script>
-
-
-<!-- TEST CONNECTION MODAL -->
-<div id="test-modal-overlay" onclick="if(event.target===this)closeTestModal()">
-  <div id="test-modal">
-    <div class="tm-header">
-      <div class="tm-title">Test Connection</div>
-      <button class="tm-close" onclick="closeTestModal()">✕</button>
-    </div>
-    <div class="tm-body">
-      <div class="tm-row">
-        <div class="tm-label">Script URL</div>
-        <div class="tm-pre" id="tm-url" style="max-height:40px"></div>
-      </div>
-      <div class="tm-row">
-        <div class="tm-label">Nonprofits endpoint (?action=get)</div>
-        <div id="tm-orgs-status" class="tm-status wait">Not tested</div>
-        <div class="tm-pre" id="tm-orgs-result" style="margin-top:0.5rem">—</div>
-      </div>
-      <div class="tm-row">
-        <div class="tm-label">Clicks endpoint (?action=getClicks)</div>
-        <div id="tm-clicks-status" class="tm-status wait">Not tested</div>
-        <div class="tm-pre" id="tm-clicks-result" style="margin-top:0.5rem">—</div>
-      </div>
-      <button class="tm-run-btn" id="tm-run-btn" onclick="runConnectionTest()">Run Test</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>

@@ -264,11 +264,81 @@
     .sparkline-wrap { display: flex; align-items: flex-end; gap: 3px; height: 40px; margin-top: 0.8rem; }
     .spark-bar { flex: 1; border-radius: 3px 3px 0 0; background: rgba(79,124,255,0.25); transition: height 0.5s cubic-bezier(0.16,1,0.3,1), background 0.2s; min-height: 3px; }
     .spark-bar:hover { background: var(--accent); }
+
+    /* ── PASSWORD GATE ── */
+    #pw-gate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #111c36;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .pw-box {
+      background: #1a2744;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px;
+      padding: 2.8rem 2.4rem;
+      width: 100%; max-width: 380px;
+      text-align: center;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+    }
+    .pw-logo {
+      width: 52px; height: 52px;
+      background: rgba(79,124,255,0.15);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.4rem;
+    }
+    .pw-logo svg { width: 26px; height: 26px; stroke: #4f7cff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .pw-title { font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 800; color: white; margin-bottom: 0.4rem; }
+    .pw-sub   { font-size: 0.85rem; color: rgba(255,255,255,0.45); margin-bottom: 1.8rem; }
+    .pw-input {
+      width: 100%; background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 0.85rem 1rem;
+      font-size: 0.95rem; font-family: 'DM Sans', sans-serif;
+      color: white; outline: none; text-align: center;
+      letter-spacing: 0.1em;
+      transition: border-color 0.2s;
+      margin-bottom: 0.9rem;
+    }
+    .pw-input::placeholder { color: rgba(255,255,255,0.25); letter-spacing: 0; }
+    .pw-input:focus { border-color: #4f7cff; }
+    .pw-input.shake { animation: shake 0.4s ease; border-color: #ef4444; }
+    .pw-btn {
+      width: 100%; background: #4f7cff; color: white; border: none;
+      padding: 0.85rem; border-radius: 10px;
+      font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .pw-btn:hover { background: #3d6bef; transform: translateY(-1px); }
+    .pw-error { font-size: 0.82rem; color: #ef4444; margin-top: 0.7rem; min-height: 1.2em; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-8px); }
+      40%      { transform: translateX(8px); }
+      60%      { transform: translateX(-5px); }
+      80%      { transform: translateX(5px); }
+    }
   </style>
 </head>
 <body>
 
-<div class="layout">
+<!-- PASSWORD GATE -->
+<div id="pw-gate">
+  <div class="pw-box">
+    <div class="pw-logo">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="pw-title">Dashboard Access</div>
+    <div class="pw-sub">Vancouver Nonprofit Hub · Admin Only</div>
+    <input id="pw-input" class="pw-input" type="password" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkPassword()" autofocus />
+    <button class="pw-btn" onclick="checkPassword()">Unlock Dashboard</button>
+    <div class="pw-error" id="pw-error"></div>
+  </div>
+</div>
+
+
+<div class="layout" id="dashboard" style="display:none">
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
@@ -286,19 +356,19 @@
 
     <div class="sidebar-section">
       <div class="sidebar-section-label">Overview</div>
-      <button class="sidebar-link active" onclick="scrollTo('#section-overview')">
+      <button id="nav-overview" class="sidebar-link active" onclick="scrollToSection('#section-overview')">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         Overview
       </button>
-      <button class="sidebar-link" onclick="scrollTo('#section-clicks')">
+      <button id="nav-clicks" class="sidebar-link" onclick="scrollToSection('#section-clicks')">
         <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Website Clicks
       </button>
-      <button class="sidebar-link" onclick="scrollTo('#section-orgs')">
+      <button id="nav-orgs" class="sidebar-link" onclick="scrollToSection('#section-orgs')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Organizations
       </button>
-      <button class="sidebar-link" onclick="scrollTo('#section-categories')">
+      <button id="nav-cats" class="sidebar-link" onclick="scrollToSection('#section-categories')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         Categories
       </button>
@@ -482,9 +552,14 @@
   let clicksData = [];
   let clickMap  = {};   // orgId → click count
 
-  function scrollTo(id) {
+  function scrollToSection(id) {
     const el = document.querySelector(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Update active sidebar link
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    const map = { '#section-overview':'nav-overview', '#section-clicks':'nav-clicks', '#section-orgs':'nav-orgs', '#section-categories':'nav-cats' };
+    const navId = map[id];
+    if (navId) document.getElementById(navId).classList.add('active');
   }
 
   // ── Load everything ──
@@ -728,8 +803,34 @@
   ];
   const DEMO_CLICK_DAYS = [2,0,5,3,8,4,6,9,7,12,5,8,14,11];
 
+  // ── Password ──
+  // Change this to your desired password
+  const DASHBOARD_PASSWORD = 'vnhub2026';
+
+  function checkPassword() {
+    const input = document.getElementById('pw-input');
+    const val   = input.value.trim();
+    if (val === DASHBOARD_PASSWORD) {
+      document.getElementById('pw-gate').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'flex';
+      sessionStorage.setItem('vnp_auth', '1');
+      loadAll();
+    } else {
+      input.classList.remove('shake');
+      void input.offsetWidth; // reflow to restart animation
+      input.classList.add('shake');
+      document.getElementById('pw-error').textContent = 'Incorrect password. Try again.';
+      input.value = '';
+      setTimeout(() => input.classList.remove('shake'), 500);
+    }
+  }
+
   // ── Boot ──
-  loadAll();
+  if (sessionStorage.getItem('vnp_auth') === '1') {
+    document.getElementById('pw-gate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'flex';
+    loadAll();
+  }
 </script>
 
 </body>

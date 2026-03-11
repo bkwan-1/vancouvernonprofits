@@ -319,6 +319,15 @@
       60%      { transform: translateX(-5px); }
       80%      { transform: translateX(5px); }
     }
+
+    /* ── ACTIVITY FEED ── */
+    .activity-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; border-bottom: 1px solid var(--border); }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .activity-body { flex: 1; min-width: 0; }
+    .activity-name { font-size: 0.85rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .activity-time { font-size: 0.75rem; color: var(--text-light); margin-top: 0.1rem; font-family: 'DM Mono', monospace; }
+    .activity-cat  { font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 20px; flex-shrink: 0; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -457,6 +466,17 @@
               <span style="font-size:0.7rem;color:var(--text-light)" id="spark-start"></span>
               <span style="font-size:0.7rem;color:var(--text-light)" id="spark-end"></span>
             </div>
+            <div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-light)" id="spark-trend"></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:1.2rem;">
+          <div class="panel-header">
+            <div class="panel-title">Recent Activity</div>
+            <div style="font-size:0.75rem;color:var(--text-light)">Last 8 clicks</div>
+          </div>
+          <div class="panel-body" style="padding:0 1.5rem;">
+            <div id="recent-activity"></div>
           </div>
         </div>
 
@@ -528,10 +548,9 @@
   // CONFIG — set this to your Apps Script URL
   // ─────────────────────────────────────────────
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7_oAF-slbqn4T_IQJFdLf6ytMaxp73aKo0F1dIsMormckGdxnrtssaTp3ZFOuxTZgsQ/exec';
-
   const isDemo = SCRIPT_URL === 'YOUR_GOOGLE_SCRIPT_URL_HERE';
 
-  // ── Category colours (matches main site) ──
+  // ── Category colours ──
   const CAT_COLORS = {
     'Environment':        '#2d6a4f',
     'Youth':              '#7c3aed',
@@ -543,26 +562,74 @@
     'Community Services': '#0f766e',
     'Food Security':      '#c2410c',
     'Indigenous':         '#b45309',
-    'Social Justice':     '#7c3aed',
+    'Social Justice':     '#6d28d9',
     'Seniors':            '#4338ca',
   };
 
   // ── State ──
+  // orgsData  : array of org objects from Nonprofits sheet
+  // rawClicks : array of { orgId, orgName, timestamp } — every individual click row
   let orgsData  = [];
-  let clicksData = [];
-  let clickMap  = {};   // orgId → click count
+  let rawClicks = [];
 
+  // ── Helpers ──
+  function esc(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = val; el.classList.remove('skeleton'); el.style.cssText = ''; }
+  }
+
+  // Return a YYYY-MM-DD string in local time for a Date object
+  function toLocalDate(d) {
+    return d.getFullYear() + '-' +
+      String(d.getMonth()+1).padStart(2,'0') + '-' +
+      String(d.getDate()).padStart(2,'0');
+  }
+
+  // Aggregate rawClicks → { orgId: count }
+  function buildClickMap() {
+    const m = {};
+    rawClicks.forEach(c => { m[c.orgId] = (m[c.orgId] || 0) + 1; });
+    return m;
+  }
+
+  // Build daily buckets for the last N days from rawClicks
+  function buildDailyBuckets(days) {
+    const buckets = {};
+    const labels  = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = toLocalDate(d);
+      buckets[key] = 0;
+      labels.push({ key, label: d.toLocaleDateString('en-CA', { month:'short', day:'numeric' }) });
+    }
+    rawClicks.forEach(c => {
+      if (!c.timestamp) return;
+      const key = toLocalDate(new Date(c.timestamp));
+      if (key in buckets) buckets[key]++;
+    });
+    return labels.map(l => ({ ...l, count: buckets[l.key] }));
+  }
+
+  // ── Sidebar scroll ──
   function scrollToSection(id) {
     const el = document.querySelector(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // Update active sidebar link
     document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-    const map = { '#section-overview':'nav-overview', '#section-clicks':'nav-clicks', '#section-orgs':'nav-orgs', '#section-categories':'nav-cats' };
+    const map = {
+      '#section-overview': 'nav-overview',
+      '#section-clicks':   'nav-clicks',
+      '#section-orgs':     'nav-orgs',
+      '#section-categories':'nav-cats'
+    };
     const navId = map[id];
     if (navId) document.getElementById(navId).classList.add('active');
   }
 
-  // ── Load everything ──
+  // ── Load all data ──
   async function loadAll() {
     setStatus('loading');
     const btn = document.getElementById('refresh-btn');
@@ -570,8 +637,8 @@
 
     if (isDemo) {
       document.getElementById('setup-banner').style.display = 'flex';
-      orgsData   = DEMO_ORGS;
-      clicksData = DEMO_CLICKS;
+      orgsData  = DEMO_ORGS;
+      rawClicks = DEMO_RAW_CLICKS;
     } else {
       document.getElementById('setup-banner').style.display = 'none';
       try {
@@ -579,8 +646,8 @@
           fetch(`${SCRIPT_URL}?action=get`).then(r => r.json()),
           fetch(`${SCRIPT_URL}?action=getClicks`).then(r => r.json())
         ]);
-        orgsData   = orgRes.status  === 'success' ? orgRes.data   : [];
-        clicksData = clkRes.status  === 'success' ? clkRes.data   : [];
+        orgsData  = orgRes.status === 'success' ? orgRes.data  : [];
+        rawClicks = clkRes.status === 'success' ? clkRes.data  : [];
       } catch (e) {
         setStatus('error');
         btn.classList.remove('spinning');
@@ -588,21 +655,22 @@
       }
     }
 
-    // Build click map
-    clickMap = {};
-    clicksData.forEach(c => { clickMap[c.orgId] = c.clicks; });
-
-    renderKPIs();
-    renderClickBars();
-    renderSparkline();
-    renderOrgTable();
-    renderCategoryCharts();
-
+    renderAll();
     setStatus('ok');
     btn.classList.remove('spinning');
     document.getElementById('last-updated-text').innerHTML =
       `<svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
        Updated ${new Date().toLocaleTimeString()}`;
+  }
+
+  function renderAll() {
+    const clickMap = buildClickMap();
+    renderKPIs(clickMap);
+    renderClickBars(clickMap);
+    renderSparkline();
+    renderRecentActivity();
+    renderOrgTable(clickMap);
+    renderCategoryCharts();
   }
 
   function setStatus(state) {
@@ -611,97 +679,142 @@
   }
 
   // ── KPI Cards ──
-  function renderKPIs() {
+  function renderKPIs(clickMap) {
     const totalOrgs   = orgsData.length;
-    const totalClicks = clicksData.reduce((s, c) => s + c.clicks, 0);
-    const topOrg      = [...clicksData].sort((a,b) => b.clicks - a.clicks)[0];
-    const cats        = new Set();
+    const totalClicks = rawClicks.length;
+
+    // Most clicked org
+    const sorted = Object.entries(clickMap).sort((a,b) => b[1]-a[1]);
+    const topId  = sorted[0]?.[0];
+    const topOrg = topId ? orgsData.find(o => o.id === topId) : null;
+    const topClicks = sorted[0]?.[1] || 0;
+
+    // Active categories
+    const cats = new Set();
     orgsData.forEach(o => (o.categories||'').split(',').forEach(c => { if (c.trim()) cats.add(c.trim()); }));
 
-    setText('kpi-total',    totalOrgs);
-    setText('kpi-total-sub', totalOrgs === 1 ? '1 organization listed' : `${totalOrgs} organizations listed`);
-    setText('kpi-clicks',    totalClicks);
-    setText('kpi-clicks-sub', 'total outbound clicks tracked');
-    document.getElementById('kpi-top').innerHTML = topOrg
-      ? `<span style="font-family:'Fraunces',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">${topOrg.orgName}</span>`
-      : `<span style="color:var(--text-light);font-size:0.88rem">No clicks yet</span>`;
-    setText('kpi-top-sub',  topOrg ? `${topOrg.clicks} click${topOrg.clicks!==1?'s':''}` : '');
-    setText('kpi-cats',      cats.size);
-    setText('kpi-cats-sub', `across ${totalOrgs} organizations`);
+    // Clicks today
+    const todayKey = toLocalDate(new Date());
+    const todayClicks = rawClicks.filter(c => c.timestamp && toLocalDate(new Date(c.timestamp)) === todayKey).length;
 
-    // Remove skeletons
-    ['kpi-total','kpi-clicks','kpi-cats'].forEach(id => {
-      const el = document.getElementById(id);
-      el.style.cssText = '';
-      el.classList.remove('skeleton');
-    });
-    document.getElementById('kpi-top').querySelector('span') &&
-      document.getElementById('kpi-top').classList.remove('skeleton');
+    setText('kpi-total',     totalOrgs);
+    setText('kpi-total-sub', `${totalOrgs === 1 ? '1 organization' : totalOrgs + ' organizations'} listed`);
+    setText('kpi-clicks',    totalClicks);
+    setText('kpi-clicks-sub', `${todayClicks} click${todayClicks !== 1 ? 's' : ''} today`);
+
+    const topEl = document.getElementById('kpi-top');
+    topEl.classList.remove('skeleton');
+    topEl.style.cssText = '';
+    topEl.innerHTML = topOrg
+      ? `<span style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:800;color:var(--navy);line-height:1.3;display:block">${esc(topOrg.name)}</span>`
+      : `<span style="color:var(--text-light);font-size:0.88rem">No clicks yet</span>`;
+    setText('kpi-top-sub', topOrg ? `${topClicks} click${topClicks !== 1 ? 's' : ''}` : '');
+
+    setText('kpi-cats',     cats.size);
+    setText('kpi-cats-sub', `across ${totalOrgs} organization${totalOrgs!==1?'s':''}`);
   }
 
-  // ── Click Bar Chart ──
-  function renderClickBars() {
+  // ── Top Orgs Click Bar Chart ──
+  function renderClickBars(clickMap) {
     const container = document.getElementById('click-bars');
-    const sorted    = [...clicksData].sort((a,b) => b.clicks - a.clicks).slice(0, 10);
+    // Build sorted list enriched with org name
+    const entries = Object.entries(clickMap)
+      .map(([id, count]) => {
+        const org = orgsData.find(o => o.id === id);
+        return { id, name: org ? org.name : (rawClicks.find(c=>c.orgId===id)?.orgName || id), count };
+      })
+      .sort((a,b) => b.count - a.count)
+      .slice(0, 10);
 
-    if (!sorted.length) {
-      container.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>No website clicks recorded yet.<br><small>Clicks will appear here once visitors start clicking through to nonprofit websites.</small></div>`;
+    if (!entries.length) {
+      container.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>No website clicks recorded yet.<br><small style="font-size:0.82rem">Clicks appear here when visitors navigate to a nonprofit's website.</small></div>`;
       document.getElementById('clicks-range').textContent = '';
       return;
     }
 
-    const max = sorted[0].clicks;
-    document.getElementById('clicks-range').textContent = `Top ${sorted.length}`;
-    container.innerHTML = sorted.map((c, i) => `
+    const max = entries[0].count;
+    document.getElementById('clicks-range').textContent = `Top ${entries.length}`;
+    container.innerHTML = entries.map(e => `
       <div class="bar-row">
         <div class="bar-meta">
-          <span class="bar-name">${esc(c.orgName)}</span>
-          <span class="bar-count">${c.clicks} click${c.clicks!==1?'s':''}</span>
+          <span class="bar-name">${esc(e.name)}</span>
+          <span class="bar-count">${e.count} click${e.count!==1?'s':''}</span>
         </div>
-        <div class="bar-track"><div class="bar-fill" data-pct="${(c.clicks/max*100).toFixed(1)}"></div></div>
+        <div class="bar-track"><div class="bar-fill" data-pct="${(e.count/max*100).toFixed(1)}"></div></div>
       </div>`).join('');
 
-    // Animate bars after paint
     requestAnimationFrame(() => {
-      document.querySelectorAll('.bar-fill').forEach(el => {
+      document.querySelectorAll('#click-bars .bar-fill').forEach(el => {
         el.style.width = el.dataset.pct + '%';
       });
     });
   }
 
-  // ── Sparkline (clicks per day, last 14 days) ──
+  // ── Sparkline: clicks per day, last 14 days ──
   function renderSparkline() {
-    const container = document.getElementById('sparkline');
+    const buckets = buildDailyBuckets(14);
+    const max     = Math.max(...buckets.map(b => b.count), 1);
 
-    // Build day buckets from raw click timestamps
-    // In demo mode we simulate timestamps; from real data we need to reconstruct from Clicks sheet
-    // Since getClicks returns aggregated, we build a fake daily spread for demo
-    const days = 14;
-    const buckets = Array.from({ length: days }, (_, i) => {
-      const d = new Date(); d.setDate(d.getDate() - (days - 1 - i));
-      return { label: d.toLocaleDateString('en-CA', { month:'short', day:'numeric' }), count: 0 };
-    });
-
-    // For demo, distribute total clicks across days
-    if (isDemo) {
-      const total = clicksData.reduce((s,c) => s+c.clicks, 0);
-      DEMO_CLICK_DAYS.forEach((v, i) => { if (i < days) buckets[i].count = v; });
-    }
-
-    const max = Math.max(...buckets.map(b => b.count), 1);
-    container.innerHTML = buckets.map(b => {
-      const pct = Math.max((b.count / max) * 100, 5);
-      return `<div class="spark-bar" style="height:${pct}%" title="${b.label}: ${b.count} clicks"></div>`;
+    document.getElementById('sparkline').innerHTML = buckets.map(b => {
+      const pct = Math.max((b.count / max) * 100, 4);
+      return `<div class="spark-bar" style="height:${pct}%" title="${b.label}: ${b.count} click${b.count!==1?'s':''}"></div>`;
     }).join('');
 
-    const labels = buckets.map(b => b.label);
-    document.getElementById('spark-start').textContent = labels[0];
-    document.getElementById('spark-end').textContent   = labels[labels.length - 1];
+    document.getElementById('spark-start').textContent = buckets[0].label;
+    document.getElementById('spark-end').textContent   = buckets[buckets.length-1].label;
+
+    // Total for the window
+    const windowTotal = buckets.reduce((s,b) => s + b.count, 0);
+    const prevBuckets = buildDailyBuckets(28).slice(0, 14);
+    const prevTotal   = prevBuckets.reduce((s,b) => s + b.count, 0);
+    const trendEl = document.getElementById('spark-trend');
+    if (trendEl) {
+      if (prevTotal === 0) {
+        trendEl.textContent = `${windowTotal} clicks in last 14 days`;
+      } else {
+        const pct = Math.round(((windowTotal - prevTotal) / prevTotal) * 100);
+        const sign = pct >= 0 ? '+' : '';
+        trendEl.textContent = `${windowTotal} clicks · ${sign}${pct}% vs prior 14 days`;
+        trendEl.style.color = pct >= 0 ? 'var(--green)' : 'var(--red)';
+      }
+    }
+  }
+
+  // ── Recent Activity Feed ──
+  function renderRecentActivity() {
+    const el = document.getElementById('recent-activity');
+    if (!el) return;
+    const recent = [...rawClicks]
+      .filter(c => c.timestamp)
+      .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 8);
+
+    if (!recent.length) {
+      el.innerHTML = `<div class="empty" style="padding:1.5rem">No activity yet.</div>`;
+      return;
+    }
+
+    el.innerHTML = recent.map(c => {
+      const org  = orgsData.find(o => o.id === c.orgId);
+      const name = org ? org.name : (c.orgName || c.orgId);
+      const cat  = org ? (org.categories||'').split(',')[0].trim() : '';
+      const color = CAT_COLORS[cat] || '#6b6b6b';
+      const ts   = c.timestamp ? new Date(c.timestamp) : null;
+      const timeStr = ts ? ts.toLocaleString('en-CA', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+      return `<div class="activity-row">
+        <div class="activity-dot" style="background:${color}"></div>
+        <div class="activity-body">
+          <div class="activity-name">${esc(name)}</div>
+          <div class="activity-time">${timeStr}</div>
+        </div>
+        ${cat ? `<span class="activity-cat" style="background:${color}20;color:${color}">${esc(cat)}</span>` : ''}
+      </div>`;
+    }).join('');
   }
 
   // ── Org Table ──
   let orgTableData = [];
-  function renderOrgTable() {
+  function renderOrgTable(clickMap) {
     orgTableData = orgsData.map(o => ({
       ...o,
       clicks: clickMap[o.id] || 0
@@ -721,21 +834,28 @@
   function drawOrgTable(rows) {
     const tbody = document.getElementById('org-tbody');
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="empty">No organizations found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty">No organizations found.</div></td></tr>`;
       return;
     }
     tbody.innerHTML = rows.map((o, i) => {
-      const rank = i < 3 ? `rank-${i+1}` : 'rank-n';
+      const rankClass = i < 3 ? `rank-${i+1}` : 'rank-n';
       const cats = (o.categories||'').split(',').map(c=>c.trim()).filter(Boolean)
-        .map(c=>`<span style="background:${CAT_COLORS[c]||'#6b6b6b'}20;color:${CAT_COLORS[c]||'#6b6b6b'};font-size:0.72rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:20px;display:inline-block;margin:0.1rem;">${esc(c)}</span>`).join('');
-      const loc = esc(o.location || o.neighborhood || '—');
+        .map(c=>`<span style="background:${CAT_COLORS[c]||'#6b6b6b'}20;color:${CAT_COLORS[c]||'#6b6b6b'};font-size:0.72rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:20px;display:inline-block;margin:0.1rem 0.1rem 0 0;">${esc(c)}</span>`).join('');
+      const loc     = esc(o.location || o.neighborhood || '—');
       const created = o.created ? new Date(o.created).toLocaleDateString('en-CA', { year:'numeric', month:'short', day:'numeric' }) : '—';
+      const hasWebsite = !!(o.website);
       return `<tr>
-        <td><span class="rank-badge ${rank}">${i+1}</span></td>
-        <td><strong style="font-size:0.88rem">${esc(o.name||'—')}</strong>${o.tagline?`<br><span style="font-size:0.78rem;color:var(--text-light)">${esc(o.tagline)}</span>`:''}</td>
-        <td>${cats||'<span style="color:var(--text-light);font-size:0.8rem">—</span>'}</td>
-        <td style="font-size:0.85rem">${loc}</td>
-        <td><span style="font-family:'DM Mono',monospace;font-size:0.88rem;font-weight:600;color:${o.clicks>0?'var(--accent)':'var(--text-light)'}">${o.clicks}</span></td>
+        <td><span class="rank-badge ${rankClass}">${i+1}</span></td>
+        <td>
+          <strong style="font-size:0.88rem;color:var(--navy)">${esc(o.name||'—')}</strong>
+          ${o.tagline ? `<br><span style="font-size:0.78rem;color:var(--text-light)">${esc(o.tagline)}</span>` : ''}
+        </td>
+        <td>${cats || '<span style="color:var(--text-light);font-size:0.8rem">—</span>'}</td>
+        <td style="font-size:0.85rem;color:var(--text-light)">${loc}</td>
+        <td>
+          <span style="font-family:'DM Mono',monospace;font-size:0.9rem;font-weight:700;color:${o.clicks > 0 ? 'var(--accent)' : 'var(--text-light)'}">${o.clicks}</span>
+          ${!hasWebsite ? `<span style="font-size:0.7rem;color:var(--text-light);margin-left:0.3rem">(no website)</span>` : ''}
+        </td>
         <td class="td-mono">${created}</td>
       </tr>`;
     }).join('');
@@ -753,27 +873,29 @@
     const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
     const max    = sorted[0]?.[1] || 1;
 
-    // Bar chart
     const barEl = document.getElementById('cat-bars');
-    if (!sorted.length) { barEl.innerHTML = '<div class="empty">No category data.</div>'; }
-    else {
+    if (!sorted.length) {
+      barEl.innerHTML = '<div class="empty">No category data yet.</div>';
+    } else {
       barEl.innerHTML = sorted.map(([cat, count]) => `
         <div class="bar-row">
           <div class="bar-meta">
             <span class="bar-name">${esc(cat)}</span>
             <span class="bar-count">${count} org${count!==1?'s':''}</span>
           </div>
-          <div class="bar-track"><div class="bar-fill" data-pct="${(count/max*100).toFixed(1)}" style="background:${CAT_COLORS[cat]||'var(--navy)'}"></div></div>
+          <div class="bar-track">
+            <div class="bar-fill" data-pct="${(count/max*100).toFixed(1)}" style="background:${CAT_COLORS[cat]||'var(--navy)'}"></div>
+          </div>
         </div>`).join('');
       requestAnimationFrame(() => {
         document.querySelectorAll('#cat-bars .bar-fill').forEach(el => { el.style.width = el.dataset.pct + '%'; });
       });
     }
 
-    // Grid chips
     const gridEl = document.getElementById('cat-grid');
-    if (!sorted.length) { gridEl.innerHTML = '<div class="empty" style="grid-column:1/-1">No category data.</div>'; }
-    else {
+    if (!sorted.length) {
+      gridEl.innerHTML = '<div class="empty" style="grid-column:1/-1">No data yet.</div>';
+    } else {
       gridEl.innerHTML = sorted.map(([cat, count]) => `
         <div class="cat-row">
           <div class="cat-dot" style="background:${CAT_COLORS[cat]||'#6b6b6b'}"></div>
@@ -783,29 +905,41 @@
     }
   }
 
-  // ── Helpers ──
-  function setText(id, val) { const el = document.getElementById(id); if(el) el.textContent = val; }
-  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-  // ── Demo data ──
+  // ── Demo data (realistic, timestamped) ──
   const DEMO_ORGS = [
-    { id:'d1', name:'Green Vancouver Initiative', tagline:'Protecting our natural spaces', description:'', mission:'', categories:'Environment', location:'Kitsilano', neighborhood:'Kitsilano', address:'', website:'https://example.com', email:'', phone:'', facebook:'', instagram:'', twitter:'', linkedin:'', volunteer:'', coverImage:'', logoImage:'', created: new Date(Date.now()-30*86400000).toISOString() },
-    { id:'d2', name:'YouthLink Vancouver',         tagline:'Empowering the next generation', description:'', mission:'', categories:'Youth,Education', location:'East Vancouver', neighborhood:'', address:'', website:'https://example.com', email:'', phone:'', facebook:'', instagram:'', twitter:'', linkedin:'', volunteer:'', coverImage:'', logoImage:'', created: new Date(Date.now()-60*86400000).toISOString() },
-    { id:'d3', name:'BC Food Security Network',    tagline:'Fighting hunger across the region', description:'', mission:'', categories:'Food Security,Community Services', location:'Downtown', neighborhood:'', address:'', website:'https://example.com', email:'', phone:'', facebook:'', instagram:'', twitter:'', linkedin:'', volunteer:'', coverImage:'', logoImage:'', created: new Date(Date.now()-15*86400000).toISOString() },
-    { id:'d4', name:'Vancouver Arts Collective',   tagline:'Celebrating local creativity', description:'', mission:'', categories:'Arts & Culture', location:'Mount Pleasant', neighborhood:'', address:'', website:'', email:'', phone:'', facebook:'', instagram:'', twitter:'', linkedin:'', volunteer:'', coverImage:'', logoImage:'', created: new Date(Date.now()-90*86400000).toISOString() },
-    { id:'d5', name:'Coastal Animal Rescue',       tagline:'Every animal deserves a home', description:'', mission:'', categories:'Animal Welfare', location:'North Vancouver', neighborhood:'', address:'', website:'https://example.com', email:'', phone:'', facebook:'', instagram:'', twitter:'', linkedin:'', volunteer:'', coverImage:'', logoImage:'', created: new Date(Date.now()-45*86400000).toISOString() },
+    { id:'d1', name:'Green Vancouver Initiative',  tagline:'Protecting our natural spaces',     categories:'Environment',                  location:'Kitsilano',    neighborhood:'Kitsilano',    website:'https://example.com', created: new Date(Date.now()-30*86400000).toISOString() },
+    { id:'d2', name:'YouthLink Vancouver',          tagline:'Empowering the next generation',    categories:'Youth,Education',              location:'East Vancouver',neighborhood:'',            website:'https://example.com', created: new Date(Date.now()-60*86400000).toISOString() },
+    { id:'d3', name:'BC Food Security Network',     tagline:'Fighting hunger across the region', categories:'Food Security,Community Services', location:'Downtown',  neighborhood:'',            website:'https://example.com', created: new Date(Date.now()-15*86400000).toISOString() },
+    { id:'d4', name:'Vancouver Arts Collective',    tagline:'Celebrating local creativity',      categories:'Arts & Culture',               location:'Mount Pleasant',neighborhood:'',            website:'',                    created: new Date(Date.now()-90*86400000).toISOString() },
+    { id:'d5', name:'Coastal Animal Rescue',        tagline:'Every animal deserves a home',      categories:'Animal Welfare',               location:'North Vancouver',neighborhood:'',           website:'https://example.com', created: new Date(Date.now()-45*86400000).toISOString() },
+    { id:'d6', name:'Seniors Connect Society',      tagline:'Reducing isolation for older adults',categories:'Seniors,Community Services',  location:'Burnaby',      neighborhood:'',            website:'https://example.com', created: new Date(Date.now()-20*86400000).toISOString() },
   ];
-  const DEMO_CLICKS = [
-    { orgId:'d1', orgName:'Green Vancouver Initiative', clicks: 47 },
-    { orgId:'d2', orgName:'YouthLink Vancouver',        clicks: 32 },
-    { orgId:'d3', orgName:'BC Food Security Network',   clicks: 28 },
-    { orgId:'d5', orgName:'Coastal Animal Rescue',      clicks: 11 },
-  ];
-  const DEMO_CLICK_DAYS = [2,0,5,3,8,4,6,9,7,12,5,8,14,11];
+
+  // Generate realistic raw click data spread across the last 30 days
+  (function() {
+    const clicks = [];
+    const pool = [
+      { id:'d1', name:'Green Vancouver Initiative',  daily: [0,1,2,1,3,2,1,0,2,3,2,1,2,3,1,2,3,2,4,3,2,1,3,2,1,2,1,3,2,1] },
+      { id:'d2', name:'YouthLink Vancouver',          daily: [0,0,1,2,1,0,1,2,1,1,2,1,1,2,1,0,1,2,1,2,1,1,0,1,2,1,1,0,1,1] },
+      { id:'d3', name:'BC Food Security Network',     daily: [1,0,0,1,1,2,1,0,1,1,0,1,2,1,0,1,0,1,1,2,1,0,1,1,0,0,1,1,2,1] },
+      { id:'d5', name:'Coastal Animal Rescue',        daily: [0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0] },
+      { id:'d6', name:'Seniors Connect Society',      daily: [0,0,1,0,0,0,1,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,1,0,0,0,1,0] },
+    ];
+    pool.forEach(org => {
+      org.daily.forEach((count, dayAgo) => {
+        for (let k = 0; k < count; k++) {
+          const ts = new Date();
+          ts.setDate(ts.getDate() - (29 - dayAgo));
+          ts.setHours(Math.floor(Math.random()*12)+8, Math.floor(Math.random()*60));
+          clicks.push({ orgId: org.id, orgName: org.name, timestamp: ts.toISOString() });
+        }
+      });
+    });
+    window.DEMO_RAW_CLICKS = clicks;
+  })();
 
   // ── Password ──
-  // Change this to your desired password
-  const DASHBOARD_PASSWORD = 'vnhub2026';
+  const DASHBOARD_PASSWORD = 'vnphub2024';
 
   function checkPassword() {
     const input = document.getElementById('pw-input');
@@ -817,7 +951,7 @@
       loadAll();
     } else {
       input.classList.remove('shake');
-      void input.offsetWidth; // reflow to restart animation
+      void input.offsetWidth;
       input.classList.add('shake');
       document.getElementById('pw-error').textContent = 'Incorrect password. Try again.';
       input.value = '';

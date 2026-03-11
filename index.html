@@ -1130,7 +1130,13 @@
       if (isDemo) {
         throw new Error('No Apps Script URL set. Please follow SETUP.md to connect Google Sheets.');
       }
-      const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+      const res  = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        redirect: 'follow'
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const json = await res.json();
       if (json.status !== 'success') throw new Error(json.message || 'Server error');
       loaded = false;

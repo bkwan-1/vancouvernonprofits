@@ -41,7 +41,7 @@ function doPost(e) {
     // Store images as-is (base64 data URLs from the compressed frontend upload).
     // No DriveApp calls needed — images are pre-compressed by the frontend.
     // Note: Google Sheets cells have a 50,000 character limit; frontend compression
-    // (logos 150×150, covers 800×400, JPEG 0.7) keeps the base64 well within this.
+    // (logos 150×150 q0.7, covers 400×200 q0.5) keeps the base64 well within this.
 
     // Write row to spreadsheet
     var sheet = getOrCreateSheet();

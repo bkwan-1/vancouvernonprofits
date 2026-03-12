@@ -31,7 +31,7 @@ A single-page website for discovering and listing nonprofits in Vancouver, BC. T
    - **Description**: `Vancouver Nonprofit Hub API`
    - **Execute as**: `Me`
    - **Who has access**: `Anyone` (this allows the website to call it without authentication)
-4. Click **Deploy**. You may be asked to authorize the script — follow the prompts.
+4. Click **Deploy**. You will be asked to authorize the script — follow the prompts and **allow Google Drive access** (required for saving uploaded images to Drive).
 5. Copy the **Web app URL** — it will look like:
    ```
    https://script.google.com/macros/s/AKfycb.../exec
@@ -61,8 +61,8 @@ A single-page website for discovering and listing nonprofits in Vancouver, BC. T
 
 ## How It Works
 
-- **Listing a nonprofit**: Users fill out the form on the "List Your Nonprofit" page. The form sends the data (including base64-encoded images) as a POST request to the Apps Script URL.
-- **Image storage**: The Apps Script decodes the base64 image data, saves the files to a Google Drive folder called `VancouverNonprofitImages`, sets them to public, and stores the direct thumbnail URL in the spreadsheet.
+- **Listing a nonprofit**: Users fill out the form on the "List Your Nonprofit" page. The form sends the data (including compressed base64-encoded images) as a POST request to the Apps Script URL.
+- **Image storage**: The Apps Script decodes the base64 image data, saves the files to a Google Drive folder called `VancouverNonprofitImages`, sets them to public, and stores the short thumbnail URL (`https://drive.google.com/thumbnail?id=...`) in the spreadsheet. This avoids Google Sheets' 50,000 character per-cell limit that raw base64 strings would exceed.
 - **Browsing**: The home and browse pages fetch data from the Apps Script (`?action=get`) and render nonprofit cards. Images are loaded directly from Google Drive using the stored thumbnail URLs.
 
 ---

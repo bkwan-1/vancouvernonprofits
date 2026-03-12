@@ -2827,6 +2827,10 @@
       const maxW = type === 'logo' ? 150 : 600;
       const maxH = type === 'logo' ? 150 : 300;
       compressImage(file, maxW, maxH, type === 'logo' ? 0.7 : 0.6).then(b64 => {
+      const maxW = type === 'logo' ? 150 : 400;
+      const maxH = type === 'logo' ? 150 : 200;
+      const quality = type === 'logo' ? 0.7 : 0.5;
+      compressImage(file, maxW, maxH, quality).then(b64 => {
         if (type === 'logo') {
           uploadedLogoB64 = b64;
           document.getElementById('logo-box').style.display = 'none';

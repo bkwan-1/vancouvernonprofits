@@ -50,6 +50,10 @@ function doPost(e) {
     if (payload.logoImage && payload.logoImage.indexOf('data:') === 0) {
       payload.logoImage = saveBase64ToDrive(payload.logoImage, 'logo_' + imageId);
     }
+    // Store images as-is (base64 data URLs from the compressed frontend upload).
+    // No DriveApp calls needed — images are pre-compressed by the frontend.
+    // Note: Google Sheets cells have a 50,000 character limit; frontend compression
+    // (logos 150×150 q0.7, covers 400×200 q0.5) keeps the base64 well within this.
 
     var sheet = getOrCreateSheet();
     appendRow(sheet, payload);

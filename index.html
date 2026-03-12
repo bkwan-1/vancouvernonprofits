@@ -2516,6 +2516,15 @@
       return str && String(str).trim() && !/^(undefined|null)$/i.test(String(str).trim());
     }
 
+    // Fallback handler for modal cover image load failures: hide the broken image
+    // and insert the category icon SVG in its place.
+    function handleCoverImageError(img) {
+      img.style.display = 'none';
+      if (!img.nextElementSibling) {
+        img.insertAdjacentHTML('afterend', getCatIcon(img.dataset.categories));
+      }
+    }
+
     // Convert various Google Drive URL formats to a directly embeddable URL
     function fixImageUrl(url) {
       if (!url || typeof url !== 'string') return url;
@@ -2524,15 +2533,15 @@
       if (url.startsWith('data:')) return url;
       // Already a direct lh3.googleusercontent.com URL
       if (url.startsWith('https://lh3.googleusercontent.com/')) return url;
-      // drive.google.com/file/d/FILE_ID/view  →  thumbnail URL
+      // drive.google.com/file/d/FILE_ID/view  →  lh3 URL (avoids CORS/referrer issues)
       let m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000`;
-      // drive.google.com/open?id=FILE_ID or ?id=FILE_ID
+      if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+      // drive.google.com/thumbnail?id=FILE_ID or drive.google.com/open?id=FILE_ID  →  lh3 URL
       m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-      if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000`;
-      // drive.google.com/uc?export=view&id=FILE_ID
+      if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+      // drive.google.com/uc?export=view&id=FILE_ID  →  lh3 URL
       m = url.match(/uc\?.*export=view.*[?&]id=([a-zA-Z0-9_-]+)/);
-      if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000`;
+      if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
       return url;
     }
 
@@ -2685,7 +2694,7 @@
       const hasImg = hasImage(n.coverImage);
       const coverUrl = hasImg ? fixImageUrl((n.coverImage || '').trim()) : '';
       const cover = hasImg
-        ? `<img src="${coverUrl}" alt="${escapeHtml(n.name)}" loading="lazy" onerror="this.style.display='none';" />`
+        ? `<img src="${coverUrl}" alt="${escapeHtml(n.name)}" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.style.display='none';" />`
         : getCatIcon(n.categories);
       const key = n.id || n.name || Math.random().toString(36).slice(2);
       orgMap[key] = n;
@@ -2712,7 +2721,7 @@
       const coverEl = document.getElementById('org-modal-cover');
       coverEl.innerHTML = `<button class="org-modal-close" onclick="closeOrgModal()">✕</button>`;
       if (hasImage(n.coverImage)) {
-        coverEl.innerHTML += `<img src="${fixImageUrl((n.coverImage || '').trim())}" alt="${escapeHtml(n.name)}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';" />`;
+        coverEl.innerHTML += `<img src="${fixImageUrl((n.coverImage || '').trim())}" alt="${escapeHtml(n.name)}" style="width:100%;height:100%;object-fit:cover;display:block;" crossorigin="anonymous" referrerpolicy="no-referrer" data-categories="${escapeHtml(n.categories)}" onerror="handleCoverImageError(this);" />`;
       } else {
         coverEl.innerHTML += getCatIcon(n.categories);
       }
@@ -2720,7 +2729,7 @@
       // Logo
       const logoEl = document.getElementById('org-modal-logo');
       if (hasImage(n.logoImage)) {
-        logoEl.innerHTML = `<img src="${fixImageUrl((n.logoImage || '').trim())}" alt="logo" style="width:100%;height:100%;object-fit:cover;border-radius:12px;" onerror="this.style.display='none';" />`;
+        logoEl.innerHTML = `<img src="${fixImageUrl((n.logoImage || '').trim())}" alt="logo" style="width:100%;height:100%;object-fit:cover;border-radius:12px;" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.style.display='none';" />`;
         logoEl.style.display = 'flex';
       } else {
         logoEl.style.display = 'none';

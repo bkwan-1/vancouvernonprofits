@@ -2520,6 +2520,8 @@
     function fixImageUrl(url) {
       if (!url || typeof url !== 'string') return url;
       url = url.trim();
+      // base64 data URLs — use directly as <img> src
+      if (url.startsWith('data:')) return url;
       // Already a direct lh3.googleusercontent.com URL
       if (url.startsWith('https://lh3.googleusercontent.com/')) return url;
       // drive.google.com/file/d/FILE_ID/view  →  thumbnail URL
@@ -2796,13 +2798,35 @@
     let uploadedLogoB64 = '';
     let uploadedCoverB64 = '';
 
+    // Compress an image file using Canvas before converting to base64.
+    // Keeps the data URL small enough to store in a Google Sheets cell.
+    function compressImage(file, maxWidth, maxHeight, quality) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = new Image();
+          img.onload = function () {
+            const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+            const w = Math.round(img.width * scale);
+            const h = Math.round(img.height * scale);
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality || 0.7));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
     function handleImageUpload(input, type) {
       if (!input.files || !input.files[0]) return;
       const file = input.files[0];
-      if (file.size > 3 * 1024 * 1024) alert('Image is over 3MB. Please use a smaller image for best results.');
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const b64 = e.target.result;
+      const maxW = type === 'logo' ? 150 : 800;
+      const maxH = type === 'logo' ? 150 : 400;
+      compressImage(file, maxW, maxH, 0.7).then(b64 => {
         if (type === 'logo') {
           uploadedLogoB64 = b64;
           document.getElementById('logo-box').style.display = 'none';
@@ -2814,8 +2838,7 @@
           document.getElementById('cover-preview').src = b64;
           document.getElementById('cover-preview').style.display = 'block';
         }
-      };
-      reader.readAsDataURL(file);
+      });
     }
 
     async function submitNonprofit() {
@@ -2862,9 +2885,17 @@
           body: JSON.stringify(payload),
           redirect: 'follow'
         });
-        if (!res.ok) throw new Error(`Server returned ${res.status}`);
-        const json = await res.json();
-        if (json.status !== 'success') throw new Error(json.message || 'Server error');
+        // Google Apps Script POST responses go through a 302 redirect cross-origin.
+        // The redirected response may be opaque so we try to parse JSON but only
+        // treat it as a failure if we get a valid server error response — a
+        // SyntaxError from res.json() means an opaque redirect, so assume success.
+        try {
+          const json = await res.json();
+          if (json.status === 'error') throw new Error(json.message || 'Server error');
+        } catch (parseErr) {
+          // Re-throw genuine server errors; swallow JSON SyntaxErrors (opaque responses)
+          if (!(parseErr instanceof SyntaxError)) throw parseErr;
+        }
         loaded = false;
         await fetchData();
         resetForm();

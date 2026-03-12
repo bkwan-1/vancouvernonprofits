@@ -4,7 +4,6 @@
 //   Who has access: Anyone (even anonymous)
 
 var SHEET_NAME = 'Nonprofits';
-var FOLDER_NAME = 'VancouverNonprofitImages';
 
 // Column order in the spreadsheet
 var COLUMNS = [
@@ -19,58 +18,43 @@ var COLUMNS = [
 // doGet – return all nonprofit rows as JSON
 // -------------------------------------------------------
 function doGet(e) {
-  var output;
   try {
-    var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'get';
-
-    if (action === 'get') {
-      var sheet = getOrCreateSheet();
-      var data = getSheetData(sheet);
-      output = ContentService
-        .createTextOutput(JSON.stringify({ status: 'success', data: data }))
-        .setMimeType(ContentService.MimeType.JSON);
-    } else {
-      output = ContentService
-        .createTextOutput(JSON.stringify({ status: 'error', message: 'Unknown action' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
+    var sheet = getOrCreateSheet();
+    var data = getSheetData(sheet);
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'success', data: data }))
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    output = ContentService
+    return ContentService
       .createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-  return output;
 }
 
 // -------------------------------------------------------
 // doPost – receive a new nonprofit registration
 // -------------------------------------------------------
 function doPost(e) {
-  var output;
   try {
     var payload = JSON.parse(e.postData.contents);
 
-    // Process images: save base64 data to Drive, replace with direct URL
-    if (payload.coverImage && payload.coverImage.startsWith('data:')) {
-      payload.coverImage = saveImageToDrive(payload.coverImage, 'cover_' + payload.id);
-    }
-    if (payload.logoImage && payload.logoImage.startsWith('data:')) {
-      payload.logoImage = saveImageToDrive(payload.logoImage, 'logo_' + payload.id);
-    }
+    // Store images as-is (base64 data URLs from the compressed frontend upload).
+    // No DriveApp calls needed — images are pre-compressed by the frontend.
+    // Note: Google Sheets cells have a 50,000 character limit; frontend compression
+    // (logos 150×150, covers 800×400, JPEG 0.7) keeps the base64 well within this.
 
     // Write row to spreadsheet
     var sheet = getOrCreateSheet();
     appendRow(sheet, payload);
 
-    output = ContentService
+    return ContentService
       .createTextOutput(JSON.stringify({ status: 'success', message: 'Nonprofit registered successfully.' }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    output = ContentService
+    return ContentService
       .createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-  return output;
 }
 
 // -------------------------------------------------------
@@ -115,53 +99,4 @@ function appendRow(sheet, data) {
     return data[col] !== undefined ? data[col] : '';
   });
   sheet.appendRow(row);
-}
-
-// -------------------------------------------------------
-// Helper: decode base64 data URL, save to Drive, return
-//         a direct thumbnail URL that works in <img> tags
-// -------------------------------------------------------
-function saveImageToDrive(dataUrl, filename) {
-  // dataUrl format: data:<mimeType>;base64,<data>
-  var matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!matches) return '';
-
-  var mimeType = matches[1];
-  var base64Data = matches[2];
-
-  // Determine file extension
-  var ext = 'jpg';
-  if (mimeType === 'image/png') ext = 'png';
-  else if (mimeType === 'image/gif') ext = 'gif';
-  else if (mimeType === 'image/webp') ext = 'webp';
-
-  var fullFilename = filename + '.' + ext;
-
-  // Decode base64 to bytes
-  var decoded = Utilities.base64Decode(base64Data);
-  var blob = Utilities.newBlob(decoded, mimeType, fullFilename);
-
-  // Get or create the target folder
-  var folder = getOrCreateFolder(FOLDER_NAME);
-
-  // Save file to Drive
-  var file = folder.createFile(blob);
-
-  // Make publicly viewable
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-  // Return a direct thumbnail URL usable in <img> tags
-  var fileId = file.getId();
-  return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1000';
-}
-
-// -------------------------------------------------------
-// Helper: get or create a Drive folder by name
-// -------------------------------------------------------
-function getOrCreateFolder(folderName) {
-  var folders = DriveApp.getFoldersByName(folderName);
-  if (folders.hasNext()) {
-    return folders.next();
-  }
-  return DriveApp.createFolder(folderName);
 }

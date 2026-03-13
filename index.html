@@ -596,7 +596,7 @@ footer{background:var(--blue);padding:20px 40px;text-align:center;border-top:1px
               https://script.google.com/macros/s/.../exec
    ═════════════════════════════════════════════════════ */
 const SHEET_ID = '1I4jmY6MuY6f4VVUY8VgJmojd-1KzKPFDzC2PDGNqdzE';
-const GAS_URL  = 'https://script.google.com/macros/s/AKfycbyr2URbZ9RWk-Wx149ocCZBR2hn9SfMkmef9g5UBp4J2RCEOTLK-5SIJ9iA3PA0bN56oQ/exec';
+const GAS_URL  = 'https://script.google.com/macros/s/AKfycbwFD8pDKNG3P_t1BecIYhSbea44O7u31VSQTIiyqx6evFWEJ6NCdQOAT8Hl_yQQa3ftIA/exec';
 const TAB      = 'Nonprofits';
 
 /* ── STATE ── */
@@ -634,20 +634,36 @@ function initFU() {
 /* ════════════════════════════════════════════════════
    DATA LOADING  (Google Sheets gviz endpoint)
 ═════════════════════════════════════════════════════ */
+// While set, loadData() preserves data[] until the Sheet actually has the new org.
+let _pendingOrgName = null;
+
 async function loadData() {
   try {
     if (SHEET_ID === 'YOUR_GOOGLE_SHEET_ID') throw new Error('not configured');
-    const url  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(TAB)}`;
+    // Cache-bust so browser fetches fresh Sheet data every time
+    const url  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(TAB)}&t=${Date.now()}`;
     const res  = await fetch(url);
     const txt  = await res.text();
     const json = JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/)[1]);
     const cols = json.table.cols.map(c => c.label.trim());
-    data = json.table.rows
+    const fresh = json.table.rows
       .map(r => { const o = {}; cols.forEach((c,i) => { o[c] = r.c && r.c[i] ? (r.c[i].v ?? '') : ''; }); return o; })
       .filter(r => r['Organization Name'] || r['Name']);
+
+    if (_pendingOrgName) {
+      // Only replace data once the Sheet actually contains the just-submitted org.
+      // This prevents the optimistic card from vanishing on early retries.
+      const sheetHasIt = fresh.some(r =>
+        (r['Organization Name'] || r['Name'] || '').trim().toLowerCase() === _pendingOrgName.toLowerCase()
+      );
+      if (sheetHasIt) { _pendingOrgName = null; data = fresh; }
+      // else: keep existing data[] — don't overwrite the optimistic entry
+    } else {
+      data = fresh;
+    }
     ready = true;
   } catch {
-    data  = [];
+    // On error, leave existing data intact so cards stay visible
     ready = true;
   }
   renderFeatured();
@@ -655,7 +671,7 @@ async function loadData() {
   const s = document.getElementById('bSub');
   if (s) s.textContent = data.length
     ? `Explore ${data.length} organization${data.length!==1?'s':''} making a difference in Vancouver`
-    : 'Be the first to list your nonprofit in Vancouver\'s directory';
+    : "Be the first to list your nonprofit in Vancouver's directory";
 }
 
 /* ── HELPERS ── */
@@ -962,62 +978,65 @@ function resetUploadZone(zoneId, fileId, previewId, hiddenId, label) {
   document.getElementById(hiddenId).value = '';
 }
 
-/* ── Show success state + add the new org to the live data array ── */
+/* ── Show success state + add new org to live data optimistically ── */
 function showSuccess(btn) {
-  window._submitDone = true; // Block any duplicate calls
+  window._submitDone = true;
 
   document.getElementById('sBanner').classList.add('show');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   btn.innerHTML = '&#10003; Submitted';
 
-  // Immediately show the new org optimistically, then keep reloading from
-  // the Sheet (3s, 6s, 12s) to replace it with the real saved data once
-  // Google Sheets has had time to write the row.
-  const today = new Date().toISOString().split('T')[0];
-  const newOrg = {
-    'Organization Name':      document.getElementById('fn').value.trim(),
-    'Tagline':                document.getElementById('ft').value.trim(),
-    'Description':            document.getElementById('fd').value.trim(),
-    'Mission':                document.getElementById('fm').value.trim(),
-    'Category':               selCats().join(', '),
-    'Founded Year':           document.getElementById('fy').value.trim(),
-    'Contact Email':          document.getElementById('fe').value.trim(),
-    'Phone':                  document.getElementById('fph').value.trim(),
-    'Address':                document.getElementById('fa').value.trim(),
-    'Neighbourhood':          document.getElementById('fnh').value.trim(),
-    'Location':               document.getElementById('fnh').value.trim() || document.getElementById('fa').value.trim() || 'Vancouver, BC',
-    'Website':                document.getElementById('fw').value.trim(),
-    'Facebook':               document.getElementById('ffb').value.trim(),
-    'Instagram':              document.getElementById('fig').value.trim(),
-    'Twitter':                document.getElementById('ftw').value.trim(),
-    'LinkedIn':               document.getElementById('fli').value.trim(),
-    'Logo URL':               document.getElementById('flo').value.trim(),
-    'Cover Image URL':        document.getElementById('fco').value.trim(),
-    'Volunteer Opportunities':document.getElementById('fv').value.trim(),
-    'Date Submitted':         today,
-    'Status':                 'Pending',
+  // Snapshot field values BEFORE the form reset clears them
+  const orgName = document.getElementById('fn').value.trim();
+  const today   = new Date().toISOString().split('T')[0];
+  const newOrg  = {
+    'Organization Name':       orgName,
+    'Tagline':                 document.getElementById('ft').value.trim(),
+    'Description':             document.getElementById('fd').value.trim(),
+    'Mission':                 document.getElementById('fm').value.trim(),
+    'Category':                selCats().join(', '),
+    'Founded Year':            document.getElementById('fy').value.trim(),
+    'Contact Email':           document.getElementById('fe').value.trim(),
+    'Phone':                   document.getElementById('fph').value.trim(),
+    'Address':                 document.getElementById('fa').value.trim(),
+    'Neighbourhood':           document.getElementById('fnh').value.trim(),
+    'Location':                document.getElementById('fnh').value.trim() || document.getElementById('fa').value.trim() || 'Vancouver, BC',
+    'Website':                 document.getElementById('fw').value.trim(),
+    'Facebook':                document.getElementById('ffb').value.trim(),
+    'Instagram':               document.getElementById('fig').value.trim(),
+    'Twitter':                 document.getElementById('ftw').value.trim(),
+    'LinkedIn':                document.getElementById('fli').value.trim(),
+    'Logo URL':                document.getElementById('flo').value.trim(),
+    'Cover Image URL':         document.getElementById('fco').value.trim(),
+    'Volunteer Opportunities': document.getElementById('fv').value.trim(),
+    'Date Submitted':          today,
+    'Status':                  'Pending',
   };
+
+  // Show the new org immediately (optimistic UI)
   data.unshift(newOrg);
   renderFeatured();
   renderBrowse();
 
-  // Re-fetch from Sheet at 4s, 9s, 16s to sync real data once GAS has written it
-  setTimeout(() => loadData(), 4000);
-  setTimeout(() => loadData(), 9000);
-  setTimeout(() => loadData(), 16000);
+  // Tell loadData() to preserve data[] until the Sheet contains this org.
+  // Retries at 5s, 12s, 22s — once the Sheet has the row, data syncs from there.
+  _pendingOrgName = orgName;
+  setTimeout(() => loadData(), 5000);
+  setTimeout(() => loadData(), 12000);
+  setTimeout(() => loadData(), 22000);
+  // Final cleanup: clear the pending guard after 30s regardless
+  setTimeout(() => { _pendingOrgName = null; }, 30000);
 
-  // Auto-dismiss toast after 4 s
+  // Auto-dismiss toast after 4s
   setTimeout(() => { document.getElementById('sBanner').classList.remove('show'); }, 4000);
 
-  // Reset form after 3.5 s
+  // Reset form after 3.5s
   setTimeout(() => {
     ['fn','ft','fd','fm','fy','fe','fph','fa','fnh','fw','ffb','fig','ftw','fli','flo','fco','fv']
       .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
     document.querySelectorAll('#fCatP .fpill').forEach(p => p.classList.remove('sel'));
     document.querySelectorAll('.fc.err').forEach(el => el.classList.remove('err'));
-    // Reset logo upload zone
     resetUploadZone('logoZone', 'logoFile', 'logoPreview', 'flo', 'Click to upload logo');
-    // Reset cover upload zone
     resetUploadZone('coverZone', 'coverFile', 'coverPreview', 'fco', 'Click to upload cover image');
     btn.disabled  = false;
     btn.innerHTML = 'Submit Registration';

@@ -964,14 +964,13 @@ function submitForm() {
   btn.disabled = true;
   btn.innerHTML = '<div class="btn-spin"></div>Submitting...';
 
-  // Start a timeout — if postMessage never fires (e.g. ad blockers),
-  // we still show success after 6 s because the row was written.
-  const fallbackTimer = setTimeout(() => {
-    showSuccess(btn);
-  }, 6000);
+  // Guard against double-firing (postMessage + fallback both triggering)
+  window._submitDone = false;
 
-  // Store timer ref so postMessage handler can clear it
-  window._submitFallback = fallbackTimer;
+  // Fallback: if GAS never sends postMessage (e.g. ad blockers), show success after 8s
+  window._submitFallback = setTimeout(() => {
+    if (!window._submitDone) showSuccess(btn);
+  }, 8000);
 
   // Submit the form to the hidden iframe
   document.getElementById('gasForm').submit();
@@ -979,20 +978,21 @@ function submitForm() {
 
 /* ── Listen for the response from GAS via postMessage ── */
 window.addEventListener('message', function(e) {
-  // Only handle messages from our submit frame
   if (!e.data) return;
   let msg;
   try { msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
 
   const btn = document.getElementById('subBtn');
   if (!btn || !btn.disabled) return; // Not in a submission
+  if (window._submitDone) return;    // Already handled — block any duplicate calls
 
-  // Clear the fallback timer
+  // GAS responded — cancel the fallback timer
   if (window._submitFallback) { clearTimeout(window._submitFallback); window._submitFallback = null; }
 
   if (msg.success) {
     showSuccess(btn);
   } else {
+    window._submitDone = true;
     btn.disabled = false;
     btn.innerHTML = 'Submit Registration';
     const eb = document.getElementById('eBanner');
@@ -1023,12 +1023,15 @@ function resetUploadZone(zoneId, fileId, previewId, hiddenId, label) {
 
 /* ── Show success state + add the new org to the live data array ── */
 function showSuccess(btn) {
+  window._submitDone = true; // Block any duplicate calls
+
   document.getElementById('sBanner').classList.add('show');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   btn.innerHTML = '&#10003; Submitted';
 
-  // Build a record from the form values and push it into the live data array
-  // so it appears immediately on Browse and Featured without a page reload.
+  // Immediately show the new org optimistically, then keep reloading from
+  // the Sheet (3s, 6s, 12s) to replace it with the real saved data once
+  // Google Sheets has had time to write the row.
   const today = new Date().toISOString().split('T')[0];
   const newOrg = {
     'Organization Name':      document.getElementById('fn').value.trim(),
@@ -1053,9 +1056,14 @@ function showSuccess(btn) {
     'Date Submitted':         today,
     'Status':                 'Pending',
   };
+  data.unshift(newOrg);
+  renderFeatured();
+  renderBrowse();
 
-  // Re-fetch from Sheet after a short delay so the new row appears
-  setTimeout(() => loadData(), 2500);
+  // Re-fetch from Sheet at 4s, 9s, 16s to sync real data once GAS has written it
+  setTimeout(() => loadData(), 4000);
+  setTimeout(() => loadData(), 9000);
+  setTimeout(() => loadData(), 16000);
 
   // Auto-dismiss toast after 4 s
   setTimeout(() => { document.getElementById('sBanner').classList.remove('show'); }, 4000);
